@@ -1,5 +1,25 @@
 import time
+class RateLimiter:
+    def __init__(self,capacity,refill_rate):
+        if(capacity<=0):
+            raise ValueError("Capacity must be greater than 0")
+        self.capacity=capacity
+        if(refill_rate<=0):
+            raise ValueError("Refill rate must be greater than 0") 
+        self.refill_rate=refill_rate
+        self.buckets={}
+    def allow_request(self,user):
+        bucket=self._get_or_create_bucket(user)
+        return bucket.allow_request()
 
+    def _get_or_create_bucket(self,user):
+        if(user in self.buckets):
+            return self.buckets[user]
+        else:
+            bucket=TokenBucket(self.capacity,self.refill_rate)
+            self.buckets[user]=bucket
+            return bucket
+        
 class TokenBucket:
     def __init__(self,capacity,refill_rate):
         if(capacity<=0):
@@ -26,13 +46,3 @@ class TokenBucket:
         new_token_amt=elapsed_time*self.refill_rate
         self.current_tokens=min(self.capacity,self.current_tokens+new_token_amt)
         self.last_refill_time=current_time
-
-bucket=TokenBucket(capacity=5,refill_rate=1)
-print(bucket.allow_request())
-print(bucket.allow_request())
-print(bucket.allow_request())
-print(bucket.allow_request())
-print(bucket.allow_request())
-print(bucket.allow_request())
-time.sleep(2)
-print(bucket.allow_request()) #after 2sec

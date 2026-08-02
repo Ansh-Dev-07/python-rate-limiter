@@ -4,7 +4,7 @@ A Python implementation of the **Token Bucket Rate Limiting Algorithm** built in
 
 This project is not just an implementation of a rate limiter—it is a learning journey from a basic in-memory token bucket to a production-oriented rate limiting system.
 
-Current Version: **v0.2.0**
+Current Version: **v0.3.0**
 
 ---
 
@@ -77,7 +77,7 @@ For the current version of this project, the Token Bucket algorithm offers the b
 
 ## Current Features
 
-The current implementation (**v0.2.0**) includes the following features:
+The current implementation (**v0.3.0**) includes the following features:
 
 ### Core Functionality
 
@@ -95,19 +95,28 @@ The current implementation (**v0.2.0**) includes the following features:
 - ✅ In-memory bucket storage using a Python dictionary
 - ✅ Requests are processed independently for each user
 
+### Thread Safety
+
+- ✅ Thread-safe bucket creation using `threading.Lock`
+- ✅ Thread-safe token consumption
+- ✅ Thread-safe token refill
+- ✅ Independent lock for every token bucket
+- ✅ Safe concurrent request handling
+
 ### Design Highlights
 
 - ✅ Object-Oriented Design (OOP)
 - ✅ Separation of responsibilities between `RateLimiter` and `TokenBucket`
-- ✅ Lazy bucket initialization (buckets are created only when required)
-- ✅ Clean and modular code structure for future enhancements
+- ✅ Lazy bucket initialization
+- ✅ Fine-grained locking strategy
+- ✅ Modular architecture ready for future extensions
 
 ### Current Implementation Scope
 
 - In-memory implementation
 - Single-process execution
 - No external dependencies
-- Suitable for learning, experimentation, and understanding the Token Bucket algorithm
+- Suitable for learning backend system design and concurrency fundamentals
 
 ## Project Structure
 
@@ -355,17 +364,20 @@ The exact output depends on the configured bucket capacity, refill rate, and the
 
 ## Current Limitations
 
-The current implementation is intentionally simple to focus on understanding the Token Bucket algorithm. The following features are **not** included in v0.2.0:
+The current implementation is intentionally focused on building a solid foundation before introducing production-level features.
 
-- No thread safety (not suitable for concurrent access)
-- No persistent storage (all data is stored in memory)
+The following features are **not** included in **v0.3.0**:
+
 - No automatic cleanup of inactive user buckets
-- No distributed rate limiting
-- No Redis or external storage integration
-- No REST API or web framework integration
+- In-memory storage only
+- No Redis or external storage
+- No REST API integration
+- No Docker support
 - No automated unit tests
+- No CI/CD pipeline
+- No distributed rate limiting
 
-These limitations will be addressed in future versions as the project evolves.
+These capabilities are planned for future releases as the project continues to evolve.
 
 ---
 
@@ -373,18 +385,37 @@ These limitations will be addressed in future versions as the project evolves.
 
 The project will continue to evolve through incremental releases.
 
-| Version | Planned Feature            | Status        |
-|---------|----------------------------|---------------|
-| v0.1.0  | Core Token Bucket          | ✅ Completed |
-| v0.2.0  | Multi-User Rate Limiter    | ✅ Completed |
-| v0.3.0  | Thread-Safe Implementation | 🔄 Planned   |
-| v0.4.0  | Redis-Based Storage        | 🔄 Planned   |
-| v0.5.0  | Distributed Rate Limiter   | 🔄 Planned   |
-| v1.0.0  | Production-Ready Release   | 🎯 Goal      |
+| Version | Planned Feature               | Status        |
+|---------|-------------------------------|---------------|
+| v0.1.0  | Core Token Bucket             | ✅ Completed |
+| v0.2.0  | Multi-User Rate Limiter       | ✅ Completed |
+| v0.3.0  | Thread-Safe Rate Limiter      | ✅ Completed |
+| v0.4.0  | Testing & Quality             | 🔄 Planned   |
+| v0.5.0  | Packaging & Project Structure | 🔄 Planned   |
+| v0.6.0  | FastAPI Integration           | 🔄 Planned   |
+| v0.7.0  | Redis Backend                 | 🔄 Planned   |
+| v0.8.0  | Docker                        | 🔄 Planned   |
+| v0.9.0  | CI/CD                         | 🔄 Planned   |
+| v1.0.0  | Production Ready              | 🎯 Goal      |
 
 ---
 
 ## Version History
+
+### v0.3.0
+
+**Added**
+
+- Thread-safe bucket creation using `threading.Lock`
+- Thread-safe token consumption
+- Thread-safe token refill operations
+- Independent locking for every token bucket
+
+**Changed**
+
+- Protected shared resources from race conditions.
+- Improved concurrent request handling while preserving the public API.
+- Strengthened the internal architecture for future scalability.
 
 ### v0.2.0
 
@@ -429,6 +460,8 @@ This project is being developed to strengthen understanding of:
 - Incremental software development
 - Technical documentation
 - Open-source project practices
+- Thread synchronization
+- Concurrent programming fundamentals
 
 Each release focuses on introducing one major engineering concept while maintaining a clean and well-documented codebase.
 

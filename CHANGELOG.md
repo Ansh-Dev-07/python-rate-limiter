@@ -6,6 +6,34 @@ The project follows [Semantic Versioning](https://semver.org/) to manage release
 
 ---
 
+## [v0.3.0] - 2026-08-02
+
+### Added
+- Added thread-safe bucket creation using `threading.Lock`.
+- Added thread-safe token consumption.
+- Added thread-safe token refill operations.
+- Added independent locking for each `TokenBucket`.
+- Added synchronization for shared bucket management inside the `RateLimiter`.
+
+### Changed
+- Improved concurrency support while preserving the existing public API.
+- Protected shared resources from race conditions.
+- Refined the internal architecture for safe multi-threaded execution.
+
+### Documentation
+- Updated the README to reflect thread-safe functionality.
+- Updated the project roadmap and version history.
+
+### Known Limitations
+- In-memory storage only.
+- No automatic cleanup of inactive buckets.
+- No Redis or external storage.
+- No REST API integration.
+- No Docker support.
+- No automated unit tests.
+- No CI/CD pipeline.
+- No distributed deployment.
+
 ## [v0.2.0] - 2026-07-28
 
 ### Added

@@ -1,21 +1,25 @@
 # Project Timeline
 
-This document outlines the planned development roadmap for the **Python Rate Limiter** project.
+This document outlines the development roadmap for the **Python Rate Limiter** project.
 
-The objective is to evolve the project incrementally from a basic in-memory implementation into a production-ready distributed rate limiting system while learning software engineering principles, system design, and backend development practices.
+The goal of this project is to build a production-ready rate limiter incrementally while learning backend engineering, software architecture, concurrency, testing, packaging, deployment, and distributed systems.
 
 ---
 
 # Project Roadmap
 
-| Version | Milestone                   | Status        |
-|---------|-----------------------------|---------------|
-| v0.1.0  | Core Token Bucket Algorithm | ✅ Completed |
-| v0.2.0  | Multi-User Rate Limiter     | ✅ Completed |
-| v0.3.0  | Thread-Safe Rate Limiter    | 🔄 Planned   |
-| v0.4.0  | Redis-Based Storage         | 🔄 Planned   |
-| v0.5.0  | Distributed Rate Limiter    | 🔄 Planned   |
-| v1.0.0  | Production-Ready Release    | 🎯 Goal      |
+| Version | Milestone                        | Status    |
+|----------|---------------------------------|-----------|
+| ✅ v0.1.0 | Core Token Bucket Algorithm   | Completed |
+| ✅ v0.2.0 | Multi-User Rate Limiter       | Completed |
+| ✅ v0.3.0 | Thread-Safe Rate Limiter      | Completed |
+| 🔄 v0.4.0 | Testing & Quality             | Planned   |
+| 🔄 v0.5.0 | Packaging & Project Structure | Planned   |
+| 🔄 v0.6.0 | FastAPI Integration           | Planned   |
+| 🔄 v0.7.0 | Redis Backend                 | Planned   |
+| 🔄 v0.8.0 | Docker                        | Planned   |
+| 🔄 v0.9.0 | CI/CD                         | Planned   |
+| 🎯 v1.0.0 | Production-Ready Release      | Goal      |
 
 ---
 
@@ -25,14 +29,13 @@ The objective is to evolve the project incrementally from a basic in-memory impl
 
 ### Objectives
 - Understand the Token Bucket algorithm.
-- Implement a basic in-memory bucket.
-- Support configurable capacity.
-- Support configurable refill rate.
+- Implement a basic in-memory token bucket.
+- Support configurable capacity and refill rate.
 - Implement lazy token refill.
 - Validate constructor inputs.
 
 ### Outcome
-A functional Token Bucket implementation capable of allowing or rejecting requests based on available tokens.
+Successfully implemented a working Token Bucket capable of allowing or rejecting requests based on available tokens.
 
 ---
 
@@ -40,77 +43,140 @@ A functional Token Bucket implementation capable of allowing or rejecting reques
 
 ### Objectives
 - Introduce the `RateLimiter` class.
-- Manage one bucket per user.
+- Manage one token bucket per user.
 - Implement lazy bucket creation.
-- Improve code organization using object-oriented principles.
+- Improve object-oriented architecture.
 
 ### Outcome
-Each user now has an independent token bucket, allowing requests to be rate-limited separately while keeping the implementation simple and extensible.
+Each user now has an independent token bucket, allowing separate rate limits while maintaining clean code organization.
 
 ---
 
-## 🔄 v0.3.0 — Thread-Safe Rate Limiter
+## ✅ v0.3.0 — Thread-Safe Rate Limiter
 
 ### Objectives
-- Protect shared resources from race conditions.
-- Introduce synchronization using Python threading primitives.
+- Make bucket creation thread-safe.
+- Protect shared bucket state from race conditions.
+- Make token consumption thread-safe.
 - Support concurrent requests safely.
-- Demonstrate thread safety through examples and tests.
 
-### Expected Learning
+### Outcome
+The project now supports concurrent access using `threading.Lock`. Shared resources are protected, race conditions are prevented, and each token bucket maintains its own synchronization.
+
+### Concepts Learned
 - Thread synchronization
-- Locks and mutual exclusion
-- Concurrent programming concepts
+- Race conditions
+- Mutual exclusion
+- Fine-grained locking
+- Concurrent programming fundamentals
 
 ---
 
-## 🔄 v0.4.0 — Redis Integration
+## 🔄 v0.4.0 — Testing & Quality
 
 ### Objectives
-- Store bucket state in Redis.
-- Allow multiple application instances to share rate-limiting data.
-- Prepare the project for horizontal scalability.
+- Learn testing philosophy.
+- Learn Python's `unittest` framework.
+- Write automated tests for all public methods.
+- Replace manual testing with automated test cases.
+- Create a dedicated `tests/` directory.
 
 ### Expected Learning
-- Redis fundamentals
-- External state management
-- Backend scalability concepts
+- Unit testing
+- Test-driven thinking
+- Regression testing
+- Software quality practices
 
 ---
 
-## 🔄 v0.5.0 — Distributed Rate Limiter
+## 🔄 v0.5.0 — Packaging & Project Structure
 
 ### Objectives
-- Extend the project to support distributed deployments.
-- Handle rate limiting across multiple servers.
-- Explore consistency and scalability challenges.
+- Refactor the project into a proper Python package.
+- Organize the code into modules.
+- Improve maintainability and scalability.
+- Prepare the project for installation via `pip`.
 
 ### Expected Learning
-- Distributed systems
-- System design
-- Fault tolerance
-- Scalability patterns
+- Python packaging
+- Project organization
+- Module design
+
+---
+
+## 🔄 v0.6.0 — FastAPI Integration
+
+### Objectives
+- Expose the rate limiter through REST APIs.
+- Integrate the core logic with FastAPI.
+- Build reusable API endpoints.
+
+### Expected Learning
+- FastAPI
+- REST API design
+- Backend service development
+
+---
+
+## 🔄 v0.7.0 — Redis Backend
+
+### Objectives
+- Replace in-memory bucket storage with Redis.
+- Enable shared state across multiple application instances.
+- Prepare for horizontal scalability.
+
+### Expected Learning
+- Redis
+- Shared storage
+- Distributed state management
+
+---
+
+## 🔄 v0.8.0 — Docker
+
+### Objectives
+- Containerize the application.
+- Create Docker images.
+- Simplify deployment across environments.
+
+### Expected Learning
+- Docker
+- Containerization
+- Deployment fundamentals
+
+---
+
+## 🔄 v0.9.0 — CI/CD
+
+### Objectives
+- Automatically run tests on every GitHub push.
+- Configure GitHub Actions.
+- Maintain code quality through automated workflows.
+
+### Expected Learning
+- GitHub Actions
+- Continuous Integration
+- Continuous Deployment
 
 ---
 
 ## 🎯 v1.0.0 — Production-Ready Release
 
 ### Objectives
-- Refactor into a modular package structure.
-- Add comprehensive automated tests.
-- Improve documentation.
-- Optimize performance.
-- Finalize project architecture.
+- Final code cleanup.
+- Performance optimization.
+- Complete documentation.
+- Stable public release.
 
 ### Expected Outcome
-A well-documented, maintainable, and extensible rate limiter demonstrating the evolution from a simple algorithm to a production-oriented backend component.
+A well-tested, maintainable, scalable, and production-oriented Python Rate Limiter demonstrating the complete engineering journey from a simple algorithm to a deployable backend component.
 
 ---
 
 # Learning Journey
 
-This project is intentionally developed in small, versioned milestones.
+This project is intentionally built through versioned milestones.
 
-Each release introduces a new engineering concept instead of implementing everything at once. This approach helps build a deeper understanding of backend engineering, system design, software architecture, and maintainable code.
+Each release introduces one major software engineering concept instead of implementing everything at once. The objective is not only to build a rate limiter but also to understand the engineering decisions behind it.
 
-The roadmap may evolve as new ideas, optimizations, or architectural improvements are discovered during development.
+The roadmap may evolve as the project grows, but every release aims to improve both the implementation and the developer's understanding of backend systems and software engineering.

@@ -1,6 +1,6 @@
 import time
 from threading import Lock
-from threading import Thread
+
 class RateLimiter:
     def __init__(self,capacity,refill_rate):
         if(capacity<=0):

@@ -6,6 +6,41 @@ The project follows [Semantic Versioning](https://semver.org/) to manage release
 
 ---
 
+## [v0.4.0] - 2026-08-05
+
+### Added
+- Added automated unit tests using Python's built-in `unittest` framework.
+- Added a dedicated test suite for the `RateLimiter` class.
+- Added a dedicated test suite for the `TokenBucket` class.
+- Added validation tests for invalid constructor parameters.
+- Added functional tests for request allowance and rejection.
+- Added multi-user behavior verification.
+- Added token refill verification tests.
+
+### Changed
+- Replaced manual testing with automated unit tests.
+- Improved project reliability and maintainability.
+- Established a testing foundation for future development.
+- Updated project documentation to reflect the new testing strategy.
+
+### Documentation
+- Updated `README.md` for v0.4.0.
+- Updated project roadmap.
+- Updated version history.
+- Added instructions for running the automated test suite.
+
+### Known Limitations
+- In-memory storage only.
+- No automatic cleanup of inactive buckets.
+- No package structure yet.
+- No FastAPI integration.
+- No Redis backend.
+- No Docker support.
+- No CI/CD pipeline.
+- No distributed deployment.
+
+---
+
 ## [v0.3.0] - 2026-08-02
 
 ### Added
@@ -33,6 +68,8 @@ The project follows [Semantic Versioning](https://semver.org/) to manage release
 - No automated unit tests.
 - No CI/CD pipeline.
 - No distributed deployment.
+
+---
 
 ## [v0.2.0] - 2026-07-28
 
@@ -81,25 +118,3 @@ The project follows [Semantic Versioning](https://semver.org/) to manage release
 - No distributed architecture.
 
 ---
-
-## Upcoming Releases
-
-### v0.3.0 (Planned)
-- Thread-safe implementation using synchronization primitives.
-- Support for concurrent request processing.
-- Concurrency testing.
-
-### v0.4.0 (Planned)
-- Redis-backed bucket storage.
-- Shared rate limiting across multiple application instances.
-
-### v0.5.0 (Planned)
-- Distributed rate limiting architecture.
-- Improved scalability and fault tolerance.
-
-### v1.0.0 (Goal)
-- Production-ready implementation.
-- Modular package structure.
-- Comprehensive automated test suite.
-- Performance benchmarking.
-- Complete project documentation.

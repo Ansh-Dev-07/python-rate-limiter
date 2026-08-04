@@ -4,7 +4,7 @@ A Python implementation of the **Token Bucket Rate Limiting Algorithm** built in
 
 This project is not just an implementation of a rate limiter—it is a learning journey from a basic in-memory token bucket to a production-oriented rate limiting system.
 
-Current Version: **v0.3.0**
+Current Version: **v0.4.0**
 
 ---
 
@@ -77,7 +77,7 @@ For the current version of this project, the Token Bucket algorithm offers the b
 
 ## Current Features
 
-The current implementation (**v0.3.0**) includes the following features:
+The current implementation (**v0.4.0**) includes the following features:
 
 ### Core Functionality
 
@@ -86,37 +86,49 @@ The current implementation (**v0.3.0**) includes the following features:
 - ✅ Configurable token refill rate
 - ✅ Automatic (lazy) token refill based on elapsed time
 - ✅ Request allow/reject mechanism
-- ✅ Input validation for invalid capacity and refill rate
+- ✅ Constructor input validation
 
 ### Multi-User Support
 
 - ✅ Independent token bucket for each user
-- ✅ Automatic bucket creation for new users
+- ✅ Automatic bucket creation
 - ✅ In-memory bucket storage using a Python dictionary
-- ✅ Requests are processed independently for each user
+- ✅ Independent request processing for each user
 
 ### Thread Safety
 
 - ✅ Thread-safe bucket creation using `threading.Lock`
-- ✅ Thread-safe token consumption
 - ✅ Thread-safe token refill
-- ✅ Independent lock for every token bucket
+- ✅ Thread-safe token consumption
+- ✅ Fine-grained locking strategy
 - ✅ Safe concurrent request handling
+
+### Testing & Quality
+
+- ✅ Automated unit tests using Python's `unittest`
+- ✅ Dedicated test suites for `RateLimiter`
+- ✅ Dedicated test suites for `TokenBucket`
+- ✅ Validation tests for invalid constructor parameters
+- ✅ Functional tests for request handling
+- ✅ Multi-user behavior verification
+- ✅ Token refill behavior verification
 
 ### Design Highlights
 
 - ✅ Object-Oriented Design (OOP)
-- ✅ Separation of responsibilities between `RateLimiter` and `TokenBucket`
+- ✅ Separation of responsibilities
 - ✅ Lazy bucket initialization
-- ✅ Fine-grained locking strategy
-- ✅ Modular architecture ready for future extensions
+- ✅ Fine-grained locking
+- ✅ Maintainable architecture
+- ✅ Automated testing foundation
 
 ### Current Implementation Scope
 
 - In-memory implementation
 - Single-process execution
-- No external dependencies
-- Suitable for learning backend system design and concurrency fundamentals
+- Thread-safe
+- Automated unit tests
+- Suitable for learning backend system design, concurrency, and software testing
 
 ## Project Structure
 
@@ -150,6 +162,12 @@ The project follows a simple object-oriented design with two main classes:
 
 - **`RateLimiter`** – Acts as the entry point for incoming requests. It manages user-specific token buckets and forwards requests to the appropriate bucket.
 - **`TokenBucket`** – Implements the Token Bucket algorithm, including token refilling and request validation.
+
+### Testing Strategy
+
+Beginning with **v0.4.0**, the project includes automated unit tests using Python's built-in `unittest` framework.
+
+Testing is separated from the production code, allowing the implementation to be validated without modifying the application itself. The current test suite verifies the core behavior of both the `RateLimiter` and `TokenBucket` classes, ensuring that future changes can be made with greater confidence.
 
 ### Request Flow
 
@@ -333,6 +351,24 @@ python main.py
 
 The project contains sample requests demonstrating how the rate limiter behaves for different users.
 
+### Run the Test Suite
+
+Execute the automated tests using:
+
+```bash
+python -m unittest discover tests
+```
+
+If all tests pass, you should see output similar to:
+
+```text
+......
+----------------------------------------------------------------------
+Ran X tests in X.XXXs
+
+OK
+```
+
 ### Example Usage
 
 ```python
@@ -364,20 +400,20 @@ The exact output depends on the configured bucket capacity, refill rate, and the
 
 ## Current Limitations
 
-The current implementation is intentionally focused on building a solid foundation before introducing production-level features.
+Although the project now includes automated testing and thread safety, it is still intentionally focused on core backend engineering concepts.
 
-The following features are **not** included in **v0.3.0**:
+The following features are **not** included in **v0.4.0**:
 
 - No automatic cleanup of inactive user buckets
 - In-memory storage only
-- No Redis or external storage
-- No REST API integration
+- No Redis integration
+- No REST API
+- No package distribution
 - No Docker support
-- No automated unit tests
 - No CI/CD pipeline
-- No distributed rate limiting
+- No distributed deployment
 
-These capabilities are planned for future releases as the project continues to evolve.
+These capabilities are planned for future releases.
 
 ---
 
@@ -390,7 +426,7 @@ The project will continue to evolve through incremental releases.
 | v0.1.0  | Core Token Bucket             | ✅ Completed |
 | v0.2.0  | Multi-User Rate Limiter       | ✅ Completed |
 | v0.3.0  | Thread-Safe Rate Limiter      | ✅ Completed |
-| v0.4.0  | Testing & Quality             | 🔄 Planned   |
+| v0.4.0  | Testing & Quality             | ✅ Completed |
 | v0.5.0  | Packaging & Project Structure | 🔄 Planned   |
 | v0.6.0  | FastAPI Integration           | 🔄 Planned   |
 | v0.7.0  | Redis Backend                 | 🔄 Planned   |
@@ -401,6 +437,25 @@ The project will continue to evolve through incremental releases.
 ---
 
 ## Version History
+
+### v0.4.0
+
+**Added**
+
+- Automated unit tests using Python's `unittest`
+- Test suite for `RateLimiter`
+- Test suite for `TokenBucket`
+- Validation tests for constructor inputs
+- Functional tests for request handling
+- Token refill verification tests
+
+**Changed**
+
+- Transitioned from manual testing to automated testing.
+- Improved project reliability and maintainability.
+- Established a testing foundation for future development.
+
+---
 
 ### v0.3.0
 
@@ -416,6 +471,8 @@ The project will continue to evolve through incremental releases.
 - Protected shared resources from race conditions.
 - Improved concurrent request handling while preserving the public API.
 - Strengthened the internal architecture for future scalability.
+
+---
 
 ### v0.2.0
 
@@ -462,6 +519,10 @@ This project is being developed to strengthen understanding of:
 - Open-source project practices
 - Thread synchronization
 - Concurrent programming fundamentals
+- Unit testing
+- Software quality assurance
+- Test automation
+- Regression testing
 
 Each release focuses on introducing one major engineering concept while maintaining a clean and well-documented codebase.
 

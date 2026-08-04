@@ -13,7 +13,7 @@ The goal of this project is to build a production-ready rate limiter incremental
 | ✅ v0.1.0 | Core Token Bucket Algorithm   | Completed |
 | ✅ v0.2.0 | Multi-User Rate Limiter       | Completed |
 | ✅ v0.3.0 | Thread-Safe Rate Limiter      | Completed |
-| 🔄 v0.4.0 | Testing & Quality             | Planned   |
+| 🔄 v0.4.0 | Testing & Quality             | Completed |
 | 🔄 v0.5.0 | Packaging & Project Structure | Planned   |
 | 🔄 v0.6.0 | FastAPI Integration           | Planned   |
 | 🔄 v0.7.0 | Redis Backend                 | Planned   |
@@ -72,19 +72,35 @@ The project now supports concurrent access using `threading.Lock`. Shared resour
 
 ---
 
-## 🔄 v0.4.0 — Testing & Quality
+## ✅ v0.4.0 — Testing & Quality
 
 ### Objectives
-- Learn testing philosophy.
-- Learn Python's `unittest` framework.
-- Write automated tests for all public methods.
-- Replace manual testing with automated test cases.
-- Create a dedicated `tests/` directory.
 
-### Expected Learning
+- Introduce automated testing using Python's `unittest` framework.
+- Replace manual verification with repeatable automated tests.
+- Validate the behavior of both `RateLimiter` and `TokenBucket`.
+- Organize tests separately from the implementation.
+
+### Outcome
+
+The project now includes automated unit tests that verify the core functionality of the rate limiter. Both the `RateLimiter` and `TokenBucket` classes are covered by dedicated test suites, improving confidence in future changes and reducing the risk of regressions.
+
+### Features Implemented
+
+- Automated unit testing using Python's `unittest`
+- Dedicated `RateLimiter` test suite
+- Dedicated `TokenBucket` test suite
+- Constructor validation tests
+- Request allowance and rejection tests
+- Multi-user behavior verification
+- Token refill verification
+
+### Concepts Learned
+
 - Unit testing
-- Test-driven thinking
+- Test automation
 - Regression testing
+- Test organization
 - Software quality practices
 
 ---
@@ -97,7 +113,7 @@ The project now supports concurrent access using `threading.Lock`. Shared resour
 - Improve maintainability and scalability.
 - Prepare the project for installation via `pip`.
 
-### Expected Learning
+### Key Learning Objectives
 - Python packaging
 - Project organization
 - Module design
@@ -111,7 +127,7 @@ The project now supports concurrent access using `threading.Lock`. Shared resour
 - Integrate the core logic with FastAPI.
 - Build reusable API endpoints.
 
-### Expected Learning
+### Key Learning Objectives
 - FastAPI
 - REST API design
 - Backend service development
@@ -125,7 +141,7 @@ The project now supports concurrent access using `threading.Lock`. Shared resour
 - Enable shared state across multiple application instances.
 - Prepare for horizontal scalability.
 
-### Expected Learning
+### Key Learning Objectives
 - Redis
 - Shared storage
 - Distributed state management
@@ -139,7 +155,7 @@ The project now supports concurrent access using `threading.Lock`. Shared resour
 - Create Docker images.
 - Simplify deployment across environments.
 
-### Expected Learning
+### Key Learning Objectives
 - Docker
 - Containerization
 - Deployment fundamentals
@@ -153,7 +169,7 @@ The project now supports concurrent access using `threading.Lock`. Shared resour
 - Configure GitHub Actions.
 - Maintain code quality through automated workflows.
 
-### Expected Learning
+### Key Learning Objectives
 - GitHub Actions
 - Continuous Integration
 - Continuous Deployment
@@ -179,4 +195,6 @@ This project is intentionally built through versioned milestones.
 
 Each release introduces one major software engineering concept instead of implementing everything at once. The objective is not only to build a rate limiter but also to understand the engineering decisions behind it.
 
-The roadmap may evolve as the project grows, but every release aims to improve both the implementation and the developer's understanding of backend systems and software engineering.
+The roadmap may evolve as the project grows, but every release focuses on one major engineering milestone. This incremental approach encourages learning the reasoning behind each feature instead of simply adding functionality.
+
+The long-term objective is not just to build a rate limiter, but to understand how production software evolves through architecture, testing, packaging, APIs, infrastructure, and deployment.

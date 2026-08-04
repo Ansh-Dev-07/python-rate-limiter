@@ -28,7 +28,7 @@ Current Version: **v0.4.0**
 
 Rate limiting is a technique used to control the number of requests a client can make to a service within a specific period of time. It helps protect applications from abuse, prevents server overload, and ensures fair resource usage among users.
 
-This project implements the **Token Bucket Algorithm**, one of the most widely used rate limiting algorithms in modern backend systems. Instead of maintaining a single global bucket, the current implementation (v0.2.0) manages an independent token bucket for each user, allowing requests from different users to be limited separately.
+This project implements the **Token Bucket Algorithm**, one of the most widely used rate limiting algorithms in modern backend systems. Instead of maintaining a single global bucket, the current implementation (v0.4.0) manages an independent token bucket for each user, provides thread-safe request handling using threading.Lock, and includes automated unit tests to verify the behavior of the core components.
 
 The project is being developed incrementally using semantic versioning. Each release introduces a new concept while preserving backward compatibility whenever possible. This approach reflects how real-world software evolves over time and makes the repository useful as both a learning resource and a software engineering portfolio project.
 
@@ -135,26 +135,33 @@ The current implementation (**v0.4.0**) includes the following features:
 ```text
 python-rate-limiter/
 │
-├── main.py                 # Entry point containing the RateLimiter and TokenBucket implementations
-├── README.md               # Project documentation
-├── CHANGELOG.md            # Version history and release notes
-├── PROJECT_TIMELINE.md     # Planned project milestones
-├── LICENSE                 # MIT License
-└── .gitignore              # Files ignored by Git
+├── main.py
+├── tests/
+│   ├── test_rate_limiter.py
+│   └── test_token_bucket.py
+│
+├── README.md
+├── CHANGELOG.md
+├── PROJECT_TIMELINE.md
+├── LICENSE
+└── .gitignore
 ```
 
 ### File Overview
 
-| File                    | Purpose                                                                                                  |
-|-------------------------|----------------------------------------------------------------------------------------------------------|
-| `main.py`               | Contains the complete implementation of the Token Bucket algorithm and the `RateLimiter` class.          |
-| `README.md`             | Explains the project, its architecture, usage, and future roadmap.                                       |
-| `CHANGELOG.md`          | Records the changes introduced in every released version.                                                |
-| `PROJECT_TIMELINE.md`   | Outlines the project's planned evolution from basic implementation to a production-ready rate limiter.   |
-| `LICENSE`               | Defines how others can use and distribute the project.                                                   |
-| `.gitignore`            | Prevents unnecessary files (such as cache files and virtual environments) from being committed to Git.   |
+| File / Directory             | Purpose                                                                                                 |
+|------------------------------|---------------------------------------------------------------------------------------------------------|
+| `main.py`                    | Contains the implementation of the `RateLimiter` and `TokenBucket` classes.                             |
+| `tests/`                     | Contains automated unit tests for the project.                                                          |
+| `tests/test_rate_limiter.py` | Tests the behavior of the `RateLimiter` class, including multi-user functionality and input validation. |
+| `tests/test_token_bucket.py` | Tests the core Token Bucket algorithm, including request handling and token refill behavior.            |
+| `README.md`                  | Project overview, architecture, usage instructions, and roadmap.                                        |
+| `CHANGELOG.md`               | Release history and notable changes for each version.                                                   |
+| `PROJECT_TIMELINE.md`        | Long-term project roadmap and engineering milestones.                                                   |
+| `LICENSE`                    | MIT License.                                                                                            |
+| `.gitignore`                 | Prevents unnecessary files from being committed to Git.                                                 |
 
-> **Note:** The current implementation keeps everything in a single file (`main.py`) for simplicity. As the project grows in future releases, the repository will be reorganized into a modular package structure.
+> **Note:** Beginning with **v0.4.0**, the project separates production code from automated tests. Future releases will further organize the project into a modular Python package.
 
 ## Architecture Overview
 
@@ -321,7 +328,7 @@ Request 8 ✅
 | Refill Tokens     | O(1)         |
 | Allow Request     | O(1)         |
 
-The current implementation performs all operations in constant time, making it efficient for in-memory rate limiting.
+The core implementation is currently contained in main.py, while automated tests are organized under the tests/ directory. In future releases, the implementation will be refactored into a modular Python package.
 
 ## Getting Started
 
@@ -350,6 +357,17 @@ python main.py
 ```
 
 The project contains sample requests demonstrating how the rate limiter behaves for different users.
+
+### Project Layout
+
+```
+main.py                     # Application source code
+tests/
+    test_rate_limiter.py
+    test_token_bucket.py
+```
+
+The automated tests can be executed at any time to verify that the implementation continues to behave correctly as new features are introduced.
 
 ### Run the Test Suite
 

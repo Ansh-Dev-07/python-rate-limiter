@@ -13,8 +13,8 @@ The goal of this project is to build a production-ready rate limiter incremental
 | ✅ v0.1.0 | Core Token Bucket Algorithm   | Completed |
 | ✅ v0.2.0 | Multi-User Rate Limiter       | Completed |
 | ✅ v0.3.0 | Thread-Safe Rate Limiter      | Completed |
-| 🔄 v0.4.0 | Testing & Quality             | Completed |
-| 🔄 v0.5.0 | Packaging & Project Structure | Planned   |
+| ✅ v0.4.0 | Testing & Quality             | Completed |
+| ✅ v0.5.0 | Packaging & Project Structure | Completed |
 | 🔄 v0.6.0 | FastAPI Integration           | Planned   |
 | 🔄 v0.7.0 | Redis Backend                 | Planned   |
 | 🔄 v0.8.0 | Docker                        | Planned   |
@@ -105,7 +105,7 @@ The project now includes automated unit tests that verify the core functionality
 
 ---
 
-## 🔄 v0.5.0 — Packaging & Project Structure
+## ✅ v0.5.0 — Packaging & Project Structure
 
 ### Objectives
 - Refactor the project into a proper Python package.

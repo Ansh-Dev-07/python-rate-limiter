@@ -1,7 +1,6 @@
 import unittest
 import time
-from main import TokenBucket
-
+from ratelimiter import TokenBucket
 class TestTokenBucket(unittest.TestCase):
     def setUp(self):
         self.bucket=TokenBucket(capacity=5,refill_rate=1)

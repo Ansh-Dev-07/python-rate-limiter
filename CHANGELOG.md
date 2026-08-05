@@ -6,6 +6,45 @@ The project follows [Semantic Versioning](https://semver.org/) to manage release
 
 ---
 
+## [v0.5.0] - 2026-08-06
+
+### Added
+- Reorganized the project into a reusable Python package.
+- Introduced the `ratelimiter/` package containing the core implementation.
+- Added `pyproject.toml` for modern Python packaging.
+- Added support for local installation using `pip install .` and `pip install -e .`.
+- Added a dedicated `docs/` directory for project documentation.
+- Added `ARCHITECTURE.md`.
+- Added `TOKEN_BUCKET.md`.
+- Added `DESIGN_DECISIONS.md`.
+- Added `TESTING.md`.
+
+### Changed
+- Refactored the project from a single-file implementation into a modular package structure.
+- Improved separation between implementation, tests, and documentation.
+- Updated imports to support package-based usage.
+- Improved repository organization following standard Python packaging practices.
+
+### Documentation
+- Updated `README.md` for the new package structure.
+- Updated installation instructions.
+- Added documentation index through the `docs/` directory.
+- Updated project roadmap.
+- Updated version history.
+- Expanded project documentation with architecture, algorithm, design decisions, and testing guides.
+
+### Known Limitations
+- In-memory storage only.
+- No automatic cleanup of inactive buckets.
+- No FastAPI integration.
+- No Redis backend.
+- Package not yet published to PyPI.
+- No Docker support.
+- No CI/CD pipeline.
+- No distributed deployment.
+
+---
+
 ## [v0.4.0] - 2026-08-05
 
 ### Added

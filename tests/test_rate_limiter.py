@@ -1,5 +1,5 @@
 import unittest
-from main import RateLimiter
+from ratelimiter import RateLimiter
 
 class TestRateLimiter(unittest.TestCase):
     def setUp(self):

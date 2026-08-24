@@ -6,6 +6,49 @@ The project follows [Semantic Versioning](https://semver.org/) to manage release
 
 ---
 
+## [v0.6.0] - 2026-08-24
+
+### Added
+
+- Added FastAPI integration as an HTTP layer around the existing rate-limiting package.
+- Added `api/` directory for the HTTP integration.
+- Added `api/main.py` containing the FastAPI application.
+- Added a root `GET /` endpoint for API availability.
+- Added a `POST /allow` endpoint for processing rate-limit requests.
+- Added dependency injection for the `RateLimiter` instance.
+- Added HTTP-level rate-limit responses using status code `429`.
+- Added request validation through FastAPI/Pydantic, including validation for missing or invalid `user` values.
+- Added `tests/test_api.py` for FastAPI integration testing.
+- Added API tests covering successful requests, rate-limit rejection, validation errors, and independent users.
+
+### Changed
+
+- Extended the project from a reusable Python package into a package with an HTTP integration layer.
+- Kept the core `RateLimiter` and `TokenBucket` implementation independent from FastAPI.
+- Updated project documentation to reflect the v0.6.0 architecture and API integration.
+- Updated testing documentation to include FastAPI integration testing.
+
+### Documentation
+
+- Updated `README.md` for v0.6.0.
+- Updated `ARCHITECTURE.md` to document the FastAPI integration and request flow.
+- Updated `TOKEN_BUCKET.md` to reflect the current v0.6.0 implementation.
+- Updated `DESIGN_DECISIONS.md` with the reasoning behind the FastAPI integration.
+- Updated `TESTING.md` with API test coverage and execution instructions.
+- Updated the project roadmap and version history.
+
+### Known Limitations
+
+- In-memory storage only.
+- No automatic cleanup of inactive buckets.
+- No Redis backend.
+- No Docker support.
+- No CI/CD pipeline.
+- No distributed deployment.
+- Package not yet published to PyPI.
+
+---
+
 ## [v0.5.0] - 2026-08-06
 
 ### Added

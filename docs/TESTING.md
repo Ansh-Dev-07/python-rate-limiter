@@ -6,7 +6,7 @@ Testing is an essential part of software engineering. As the project evolves thr
 
 Unlike the README, which introduces the project, or the architecture and design documents, this guide focuses entirely on verifying correctness and maintaining software quality.
 
-Current Testing Version: **v0.5.0**
+Current Testing Version: **v0.6.0**
 
 ---
 
@@ -30,8 +30,6 @@ Testing is treated as an integral part of the development process rather than an
 
 ---
 
----
-
 # Test Structure
 
 Beginning with **v0.4.0**, the project introduced a dedicated `tests/` directory to separate production code from automated tests.
@@ -48,7 +46,8 @@ python-rate-limiter/
 └── tests/
     ├── __init__.py
     ├── test_rate_limiter.py
-    └── test_token_bucket.py
+    ├── test_token_bucket.py
+    └── test_api.py
 ```
 
 Separating tests from the implementation improves maintainability and makes the project easier to understand as it grows.
@@ -63,6 +62,7 @@ Each test module focuses on a specific component of the project.
 |-----------|---------|
 | `test_rate_limiter.py` | Verifies the behavior of the `RateLimiter` class, including bucket creation, multi-user handling, and constructor validation. |
 | `test_token_bucket.py` | Verifies the Token Bucket algorithm, including token consumption, request rejection, and automatic token refill. |
+| `test_api.py` | Verifies the FastAPI integration, including the root endpoint, successful requests, rate-limit rejection (`429`), request validation (`422`), and independent buckets for different users. |
 
 This separation follows the same design philosophy as the production code—each file has a single responsibility.
 
@@ -70,7 +70,7 @@ This separation follows the same design philosophy as the production code—each
 
 ## Current Testing Scope
 
-At **v0.5.0**, the automated test suite validates:
+At **v0.6.0**, the automated test suite validates:
 
 - Constructor input validation.
 - Token consumption.
@@ -79,7 +79,11 @@ At **v0.5.0**, the automated test suite validates:
 - Token refill after elapsed time.
 - Multi-user bucket isolation.
 - Bucket reuse.
-- Thread-safe implementation behavior (functional correctness).
+- FastAPI root endpoint behavior.
+- Successful API request handling.
+- HTTP `429` responses when the rate limit is exceeded.
+- Request validation for missing or invalid `user` fields.
+- Independent rate-limiting behavior for different users through the API.
 
 The tests focus on validating observable behavior rather than internal implementation details.
 
@@ -96,8 +100,6 @@ Keeping tests separate from production code provides several advantages:
 - Simpler integration with Continuous Integration (CI) pipelines.
 
 As the project evolves, the `tests/` directory will continue growing alongside the implementation without affecting the package structure.
-
----
 
 ---
 
@@ -122,7 +124,7 @@ Example output:
 ```text
 ..................
 ----------------------------------------------------------------------
-Ran 18 tests in 4.014s
+Ran XX tests in X.XXXs
 
 OK
 ```
@@ -143,6 +145,12 @@ To execute only the `TokenBucket` tests:
 
 ```bash
 python -m unittest tests.test_token_bucket
+```
+
+To execute the FastAPI tests:
+
+```bash
+python -m unittest tests.test_api
 ```
 
 Running individual test modules is useful while developing or debugging a specific component.
@@ -167,7 +175,7 @@ test_invalid_capacity_raises_error ... ok
 ...
 
 ----------------------------------------------------------------------
-Ran 18 tests
+Ran XX tests
 
 OK
 ```
@@ -187,8 +195,6 @@ The test suite should be executed:
 - Before opening a pull request.
 
 Running tests frequently helps detect regressions early and keeps the project stable throughout development.
-
----
 
 ---
 
@@ -241,7 +247,7 @@ These tests ensure that invalid configurations are detected immediately rather t
 
 ## Testing Approach
 
-The project primarily uses **behavior-driven unit testing**.
+The project primarily uses **behavior-focused unit testing**.
 
 Instead of verifying private variables or internal implementation details, the tests validate observable behavior through the public interface.
 
@@ -258,21 +264,18 @@ This approach makes the tests more resilient to internal refactoring while ensur
 
 ## Current Limitations
 
-The current automated test suite focuses on the core implementation.
+The current automated test suite covers the core rate-limiting implementation and the FastAPI integration.
 
 It does not yet include:
 
 - Performance benchmarks.
 - Load testing.
 - Stress testing.
-- FastAPI endpoint testing.
-- Redis integration testing.
-- Distributed system testing.
-- CI/CD validation.
+- Redis backend testing.
+- Docker environment testing.
+- Distributed deployment testing.
 
 These areas will be introduced gradually as new project milestones are completed.
-
----
 
 ---
 
@@ -374,8 +377,6 @@ The test suite should evolve alongside the project and continue to reflect the c
 
 ---
 
----
-
 # Future Testing Roadmap
 
 Testing will continue to evolve alongside the project.
@@ -388,16 +389,22 @@ The long-term objective is to build a comprehensive testing strategy that suppor
 
 ## v0.6.0 — FastAPI Integration
 
-When REST API endpoints are introduced, the project will include API-level testing.
+FastAPI integration was introduced as an HTTP layer around the existing rate-limiting package.
 
-Planned additions include:
+The API test suite was added to verify the behavior of this integration while keeping the existing unit tests for `RateLimiter` and `TokenBucket` independent from the API layer.
 
-- Endpoint response validation.
-- HTTP status code verification.
-- Invalid request handling.
-- API integration tests.
+The current API tests cover:
 
-The existing unit tests will continue validating the core package independently from the API layer.
+- Root endpoint availability.
+- Successful `/allow` requests.
+- Rate-limit rejection with HTTP `429`.
+- Request validation for missing `user` fields.
+- Request validation for invalid `user` types.
+- Independent rate-limiting behavior for different users.
+
+The API tests use FastAPI's `TestClient` and override the limiter dependency so that each test can use a controlled `RateLimiter` instance.
+
+The existing unit tests continue validating the core `RateLimiter` and `TokenBucket` behavior independently from the API layer.
 
 ---
 
@@ -465,7 +472,7 @@ As the project approaches **v1.0.0**, the testing strategy may expand to include
 - Load testing.
 - Stress testing.
 - Concurrency testing.
-- End-to-end API testing.
+- Expanded API integration testing.
 
 These additional testing layers will complement the existing unit tests and provide greater confidence in the project's reliability.
 
@@ -478,8 +485,6 @@ The testing strategy is intended to evolve alongside the architecture.
 Every major feature should introduce corresponding automated tests so that the project remains reliable as its complexity increases.
 
 The goal is not simply to increase the number of tests, but to ensure that every significant behavior can be verified automatically.
-
----
 
 ---
 
@@ -498,13 +503,12 @@ Throughout this document, we explored:
 - Guidelines for writing new tests.
 - The long-term testing roadmap.
 
-The project currently focuses on **behavior-driven unit testing**, validating the public interface of the package rather than its internal implementation details.
+The project currently focuses on **behavior-focused unit testing**, validating the public interface of the package rather than its internal implementation details.
 
 This approach keeps the tests maintainable and resilient to future refactoring.
 
-As the project evolves, the testing strategy will expand alongside new architectural milestones, including:
+As the project evolves, the testing strategy will expand alongside new architectural milestones. The current v0.6.0 release has already introduced FastAPI integration testing, while future milestones will add:
 
-- FastAPI integration testing.
 - Redis backend testing.
 - Docker environment validation.
 - Continuous Integration with GitHub Actions.

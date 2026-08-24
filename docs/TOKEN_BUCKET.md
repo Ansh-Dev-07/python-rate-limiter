@@ -4,7 +4,7 @@ This document explains the **Token Bucket algorithm**, which forms the core of t
 
 Rather than focusing on the project architecture or implementation details, this document explains the algorithm itself—why it exists, how it works, and why it is widely used in networking and backend systems.
 
-Current Algorithm Version: **v0.5.0**
+Current Algorithm Version: **v0.6.0**
 
 ---
 
@@ -219,6 +219,28 @@ No background thread is required.
 
 ---
 
+### Fractional Token Accumulation
+
+The implementation tracks the token count using a numeric value rather than requiring tokens to be generated only as whole units.
+
+For example, if the refill rate is:
+
+```text
+1 token / second
+```
+
+and 0.5 seconds have elapsed, the bucket may accumulate:
+
+```text
+0.5 tokens
+```
+
+A request is allowed only when at least one complete token is available.
+
+This allows the refill calculation to represent elapsed time accurately without requiring a background timer.
+
+---
+
 ## Example
 
 Suppose:
@@ -298,13 +320,45 @@ The refill operation occurs immediately before every request is evaluated.
 
 The algorithm:
 
-1. Calculates elapsed time.
-2. Determines how many tokens should be added.
-3. Updates the bucket.
-4. Caps the bucket at its maximum capacity.
-5. Processes the incoming request.
+1. Calculates the elapsed time since the previous refill.
+2. Calculates the number of tokens generated during that elapsed time.
+3. Adds the generated tokens to the current token count.
+4. Caps the token count at the bucket capacity.
+5. Updates the last refill timestamp.
+6. Processes the incoming request.
 
 This guarantees that the bucket state is always up to date without requiring continuous background processing.
+
+### Refill Calculation
+
+The implementation calculates newly available tokens using the elapsed time and configured refill rate:
+
+```text
+New Tokens = Elapsed Time × Refill Rate
+```
+
+The resulting token count is then capped at the configured bucket capacity:
+
+```text
+Current Tokens =
+    min(Capacity, Current Tokens + New Tokens)
+```
+
+For example, with:
+
+```text
+Refill Rate = 2 tokens / second
+Elapsed Time = 1.5 seconds
+```
+
+the refill calculation produces:
+
+```text
+New Tokens = 1.5 × 2
+           = 3 tokens
+```
+
+The implementation then adds those tokens to the current bucket state without allowing the total to exceed the bucket capacity.
 
 ---
 
@@ -330,7 +384,7 @@ The algorithm performs work only when requests arrive.
 
 ## Predictable Request Rate
 
-Although short bursts are allowed, the refill rate ensures that the average request rate never exceeds the configured limit.
+Although short bursts are allowed, the refill rate controls the long-term rate at which new requests can be sustained after the available tokens are consumed.
 
 This provides fairness while protecting backend resources.
 
@@ -377,7 +431,7 @@ The current implementation stores bucket state in memory.
 
 If the application restarts, all bucket information is lost.
 
-Future versions will introduce Redis-backed storage to solve this limitation.
+Redis-backed storage is planned for **v0.7.0** to address this limitation.
 
 ---
 
@@ -387,17 +441,17 @@ The current implementation supports thread-safe execution inside a single Python
 
 Multiple application instances do not currently share rate-limiting state.
 
-Distributed synchronization is planned for future releases.
+Distributed synchronization is planned for **v0.7.0** through the Redis backend.
 
 ---
 
 ## Time Dependency
 
-The algorithm depends on accurate system time.
+The current implementation uses `time.time()` to measure elapsed time.
 
 If the system clock changes unexpectedly, token calculations may become inaccurate.
 
-Production systems often use monotonic clocks to avoid this issue.
+A future implementation could use a monotonic clock such as `time.monotonic()` for elapsed-time measurement, since monotonic clocks are not affected by system clock adjustments.
 
 ---
 
@@ -405,11 +459,10 @@ Production systems often use monotonic clocks to avoid this issue.
 
 The current implementation intentionally focuses on learning software engineering concepts step by step.
 
-Future releases will extend the algorithm with:
+Future releases will extend the surrounding system with:
 
 - Redis-backed bucket storage
 - Distributed rate limiting
-- FastAPI integration
 - Docker deployment
 - CI/CD automation
 - Performance benchmarking
@@ -442,6 +495,7 @@ Each of these operations takes constant time.
 ```
 Time Complexity = O(1)
 ```
+This applies to the processing of an individual bucket request. The calculation does not iterate through previous requests or generated tokens.
 
 The execution time does not depend on:
 
@@ -473,9 +527,7 @@ because Python dictionary insertion is an average constant-time operation.
 
 ## Space Complexity
 
-Each user owns one independent `TokenBucket`.
-
-Every bucket stores only a small amount of information:
+A single `TokenBucket` maintains only a fixed amount of state:
 
 - Bucket capacity
 - Current token count
@@ -483,19 +535,29 @@ Every bucket stores only a small amount of information:
 - Last refill timestamp
 - Thread lock
 
-Therefore:
+Therefore, the space required by an individual bucket is:
 
+```text
+Space Complexity = O(1)
 ```
+
+In the project's multi-user `RateLimiter`, one bucket is maintained for each user with stored state.
+
+Therefore, the overall memory usage of the rate limiter is:
+
+```text
 Space Complexity = O(n)
 ```
 
 where:
 
-```
-n = Number of Active Users
+```text
+n = Number of Users with Stored Buckets
 ```
 
-As more users access the application, one bucket is created for each user.
+As more unique users access the application, one bucket is created for each user and remains stored until the limiter instance is discarded or bucket cleanup is introduced.
+
+This distinction separates the complexity of the Token Bucket itself from the memory requirements of the project's multi-user implementation.
 
 ---
 
@@ -647,7 +709,7 @@ This project builds upon these concepts by implementing the Token Bucket algorit
 
 Rather than implementing every possible feature at once, the project evolves incrementally through versioned releases. Each release introduces a single software engineering milestone while preserving the core principles of the Token Bucket algorithm.
 
-As future versions introduce FastAPI, Redis, Docker, and CI/CD, the underlying algorithm will remain unchanged. This demonstrates an important software engineering principle:
+With FastAPI now providing an HTTP integration in v0.6.0, future releases will extend the surrounding architecture with Redis, Docker, and CI/CD while the underlying algorithm remains unchanged. This demonstrates an important software engineering principle:
 
 > **A well-designed core algorithm should remain stable while the surrounding architecture continues to evolve.**
 

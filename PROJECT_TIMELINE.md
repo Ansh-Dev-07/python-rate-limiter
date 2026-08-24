@@ -15,7 +15,7 @@ The goal of this project is to build a production-ready rate limiter incremental
 | ✅ v0.3.0 | Thread-Safe Rate Limiter      | Completed |
 | ✅ v0.4.0 | Testing & Quality             | Completed |
 | ✅ v0.5.0 | Packaging & Project Structure | Completed |
-| 🔄 v0.6.0 | FastAPI Integration           | Planned   |
+| ✅ v0.6.0 | FastAPI Integration           | Completed |
 | 🔄 v0.7.0 | Redis Backend                 | Planned   |
 | 🔄 v0.8.0 | Docker                        | Planned   |
 | 🔄 v0.9.0 | CI/CD                         | Planned   |
@@ -118,19 +118,51 @@ The project now includes automated unit tests that verify the core functionality
 - Project organization
 - Module design
 
+### Outcome
+
+The project was successfully reorganized into a reusable Python package with a dedicated `ratelimiter/` package, modern packaging configuration through `pyproject.toml`, and separate directories for tests and documentation.
+
+The package can now be installed locally using standard Python packaging tools.
+
 ---
 
-## 🔄 v0.6.0 — FastAPI Integration
+## ✅ v0.6.0 — FastAPI Integration
 
 ### Objectives
-- Expose the rate limiter through REST APIs.
-- Integrate the core logic with FastAPI.
-- Build reusable API endpoints.
 
-### Key Learning Objectives
+- Expose the rate limiter through HTTP APIs.
+- Integrate the existing `RateLimiter` package with FastAPI.
+- Keep the core rate-limiting logic independent from the web framework.
+- Build reusable API endpoints.
+- Add API-level testing alongside the existing unit tests.
+
+### Features Implemented
+
+- Added FastAPI integration through the `api/` directory.
+- Added `api/main.py` containing the FastAPI application.
+- Added a root `GET /` endpoint.
+- Added a `POST /allow` endpoint for processing rate-limit requests.
+- Added dependency injection for the `RateLimiter` instance.
+- Added HTTP `429` responses when the rate limit is exceeded.
+- Added request validation for missing or invalid `user` values.
+- Added `tests/test_api.py` for API integration testing.
+- Added API tests for successful requests, rate-limit rejection, validation errors, and independent users.
+
+### Outcome
+
+The project now exposes the reusable rate limiter through a FastAPI-based HTTP layer while keeping the underlying `RateLimiter` and `TokenBucket` components independent from the web framework.
+
+The v0.6.0 milestone extends the project from a standalone Python package into a backend component that can be consumed through HTTP APIs.
+
+### Concepts Learned
+
 - FastAPI
-- REST API design
-- Backend service development
+- HTTP API design
+- HTTP request and response handling
+- Dependency injection
+- Request validation
+- API integration testing
+- Separation between core business logic and framework-specific integration
 
 ---
 

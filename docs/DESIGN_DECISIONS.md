@@ -10,7 +10,7 @@ Every software project involves trade-offs. There are usually multiple valid sol
 
 The decisions documented here were made after considering simplicity, maintainability, scalability, learning objectives, and future extensibility.
 
-Current Version: **v0.5.0**
+Current Version: **v0.6.0**
 
 ---
 
@@ -106,7 +106,7 @@ The Token Bucket algorithm was selected because it provides a good balance betwe
 Key reasons include:
 
 - Supports configurable burst traffic.
-- Maintains an average request rate.
+- Controls the long-term request rate through token replenishment.
 - Constant-time request processing.
 - Minimal memory overhead.
 - Easy to explain during interviews.
@@ -205,7 +205,11 @@ This approach provides an excellent balance between efficiency and implementatio
 
 The bucket is updated only when it is accessed.
 
-As a result, the internal token count may not always represent the exact current state until the next request arrives.
+The bucket's stored token count is updated only when the bucket is accessed. While an inactive bucket is not being accessed, its stored value is not proactively updated to reflect elapsed time.
+
+When the next request arrives, the elapsed time is calculated and the bucket is brought up to date before the request is evaluated.
+
+This behavior is intentional and avoids unnecessary background work.
 
 This behavior is intentional and does not affect the correctness of the algorithm.
 
@@ -213,13 +217,14 @@ This behavior is intentional and does not affect the correctness of the algorith
 
 ## Future Evolution
 
-The lazy refill strategy will continue to be used even after introducing:
+The lazy refill strategy will continue to be used as the project evolves through:
 
 - Redis-backed storage
-- FastAPI integration
 - Distributed deployments
+- Docker deployment
+- CI/CD automation
 
-Only the storage mechanism will change; the refill strategy itself is expected to remain unchanged.
+The storage and deployment mechanisms may change, but the refill strategy itself is expected to remain unchanged.
 
 ---
 
@@ -293,7 +298,7 @@ Each user's activity affects only their own bucket, ensuring predictable behavio
 
 ## Trade-offs
 
-Maintaining a separate bucket for every active user increases memory usage as the number of users grows.
+Maintaining a separate bucket for every user with stored state increases memory usage as the number of users grows.
 
 However, each bucket stores only a small amount of state, making this trade-off acceptable for the current implementation.
 
@@ -403,7 +408,7 @@ As a result:
 
 - Bucket data is lost when the application restarts.
 - State cannot be shared between multiple application instances.
-- Memory usage increases with the number of active users.
+- Memory usage increases with the number of users with stored buckets.
 
 These limitations are acceptable for the current implementation because the primary goal is to build and understand the core rate-limiting logic.
 
@@ -411,7 +416,7 @@ These limitations are acceptable for the current implementation because the prim
 
 ## Future Evolution
 
-Beginning with **v0.7.0**, the dictionary implementation will be replaced by Redis-backed storage.
+Beginning with **v0.7.0**, the dictionary implementation is planned to be replaced by Redis-backed storage.
 
 The public API of the `RateLimiter` will remain unchanged, while only the underlying storage mechanism evolves.
 
@@ -594,7 +599,7 @@ Packaging the project provides several long-term benefits:
 - Standard Python project layout.
 - Better preparation for future publishing and distribution.
 
-This structure also makes future integrations, such as FastAPI and Redis, easier to implement without major refactoring.
+This structure made the FastAPI integration in v0.6.0 easier to implement and provides a foundation for future integrations such as Redis.
 
 ---
 
@@ -614,7 +619,6 @@ Future releases will continue building on this package structure.
 
 New modules may be added for:
 
-- FastAPI integration
 - Redis storage
 - Docker support
 - Utility functions
@@ -695,7 +699,7 @@ Key benefits include:
 - Industry-recognized testing framework.
 - Seamless integration with future CI/CD pipelines.
 
-The focus of this release is understanding testing principles rather than exploring advanced testing frameworks.
+The focus of the original testing milestone was understanding testing principles rather than exploring advanced testing frameworks.
 
 ---
 
@@ -723,6 +727,102 @@ Future releases may expand the testing strategy with:
 Regardless of the framework used, automated testing will remain a fundamental part of the project's development workflow.
 
 ---
+
+# Decision 8 — FastAPI Integration
+
+## Problem
+
+The rate limiter initially existed only as a Python library that could be called directly from application code.
+
+While this demonstrated the core algorithm and backend component design, the project also needed to demonstrate how the rate limiter could operate as part of an HTTP-based backend service.
+
+The integration needed to expose the existing rate-limiting functionality without moving the core algorithm into the web framework.
+
+---
+
+## Alternatives Considered
+
+### Direct Framework-Specific Implementation
+
+Implement the rate-limiting logic directly inside FastAPI route handlers.
+
+**Advantages**
+
+- Simple initial implementation.
+- Minimal number of files.
+
+**Disadvantages**
+
+- Couples rate-limiting logic to the web framework.
+- Makes the core component harder to reuse.
+- Mixes business logic with HTTP handling.
+- Makes future framework changes more difficult.
+
+---
+
+### FastAPI as an Integration Layer
+
+Keep the existing `RateLimiter` as the core component and use FastAPI only to expose it through HTTP endpoints.
+
+**Advantages**
+
+- Preserves separation of concerns.
+- Keeps the core rate-limiting logic framework-independent.
+- Allows the same `RateLimiter` to be used outside FastAPI.
+- Provides a clear boundary between HTTP handling and rate-limiting logic.
+- Builds directly on the package structure introduced in v0.5.0.
+
+**Disadvantages**
+
+- Introduces an additional web framework dependency.
+- Requires API-specific request and response handling.
+- Adds another layer to the application.
+
+---
+
+## Decision
+
+The project uses **FastAPI as an integration layer** rather than embedding the rate-limiting algorithm directly into API route handlers.
+
+The existing `RateLimiter` remains responsible for rate-limiting behavior, while FastAPI handles HTTP request processing and exposes the functionality through API endpoints.
+
+This keeps the core algorithm independent from the web framework.
+
+---
+
+## Why This Decision?
+
+The primary reason for this approach is separation of concerns.
+
+The responsibilities remain clearly divided:
+
+- `TokenBucket` manages token calculation and request allowance.
+- `RateLimiter` manages users and their buckets.
+- FastAPI handles HTTP requests and responses.
+
+This allows the v0.6.0 integration to add HTTP functionality without redesigning the underlying rate-limiting component.
+
+It also creates a cleaner foundation for future infrastructure changes such as Redis-backed storage and distributed deployment.
+
+---
+
+## Trade-offs
+
+Introducing FastAPI adds an external dependency and increases the overall project surface area.
+
+The application also requires HTTP-specific request and response handling that was not necessary when the rate limiter was used directly as a Python library.
+
+However, these costs are acceptable because the integration demonstrates how the reusable package can be incorporated into a real backend service without coupling the core algorithm to the framework.
+
+---
+
+## Future Evolution
+
+The FastAPI integration is intended to remain an integration layer rather than becoming part of the core rate-limiting algorithm.
+
+Future releases can replace or extend the underlying storage mechanism without requiring the API layer to contain rate-limiting implementation details.
+
+In **v0.7.0**, Redis-backed storage is planned as the next major infrastructure evolution while preserving the existing separation between the API layer, rate limiter, and storage mechanism.
 
 ---
 
@@ -754,8 +854,9 @@ The key design decisions documented in this file include:
 - Applying fine-grained locking.
 - Organizing the project as a reusable Python package.
 - Introducing automated testing with Python's built-in `unittest` framework.
+- Using FastAPI as an integration layer for HTTP access.
 
-As future versions introduce FastAPI, Redis, Docker, and CI/CD, new design decisions will be documented in this file to explain the reasoning behind those architectural changes.
+With FastAPI now integrated in **v0.6.0**, future releases will document the design reasoning behind Redis, Docker, CI/CD, and other significant engineering changes.
 
 The goal is not only to build a working rate limiter but also to document the engineering thought process that transformed a simple algorithm into a production-oriented software project.
 

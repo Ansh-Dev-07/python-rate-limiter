@@ -6,41 +6,60 @@ Unlike the README, which provides a high-level overview, this document focuses o
 
 The architecture evolves with each project release and is intentionally designed to demonstrate software engineering principles such as modularity, separation of concerns, maintainability, and scalability.
 
-Current Architecture Version: **v0.5.0**
+Current Architecture Version: **v0.6.0**
 
 ---
 
 # High-Level Architecture
 
-At **v0.5.0**, the project is organized as a reusable Python package.
+At **v0.6.0**, the project consists of a reusable Python package and a FastAPI-based HTTP integration layer.
 
+The FastAPI layer exposes the existing rate limiter through HTTP endpoints while keeping the core rate-limiting implementation independent from the web framework.
+
+```text
+                         Client
+                           │
+                           │ HTTP Request
+                           ▼
+                    ┌──────────────┐
+                    │   FastAPI    │
+                    │  API Layer   │
+                    └──────┬───────┘
+                           │
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │ RateLimiter  │
+                    └──────┬───────┘
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │ TokenBucket  │
+                    └──────┬───────┘
+                           │
+                           ▼
+                    Token Refill Logic
 ```
-Application
-      │
-      ▼
-RateLimiter
-      │
-      ▼
-TokenBucket
-      │
-      ▼
-Token Refill Logic
-```
 
-Each layer has a single responsibility.
+Each layer has a distinct responsibility.
 
-- The application sends requests.
-- `RateLimiter` manages users and their buckets.
-- `TokenBucket` enforces rate limiting.
-- The refill logic replenishes tokens based on elapsed time.
+- The **client** sends HTTP requests to the API.
+- **FastAPI** handles HTTP routing, request validation, and HTTP responses.
+- `RateLimiter` manages users and their corresponding token buckets.
+- `TokenBucket` enforces the rate-limiting rules for an individual user.
+- The **token refill logic** replenishes tokens based on elapsed time.
 
-This separation keeps the implementation modular and prepares the project for future integrations such as FastAPI, Redis, and distributed deployments.
+The FastAPI layer acts as an integration boundary around the existing rate-limiting package. The core `RateLimiter` and `TokenBucket` classes do not depend on FastAPI.
+
+This separation allows the same rate-limiting implementation to be used directly as a Python library or through the HTTP API.
+
+The architecture also provides a foundation for future integrations such as Redis-backed storage, Docker deployment, and CI/CD automation.
 
 ---
 
-# Package Structure
+# Package Structure 
 
-Beginning with **v0.5.0**, the project adopts a modular package structure instead of keeping all implementation inside a single Python file.
+Beginning with **v0.5.0**, the project adopts a modular package structure instead of keeping all implementation inside a single Python file. In **v0.6.0**, a separate `api/` directory was added to contain the FastAPI integration layer.
 
 The repository is organized into separate directories, each with a clear responsibility.
 
@@ -52,10 +71,15 @@ python-rate-limiter/
 │   ├── rate_limiter.py
 │   └── token_bucket.py
 │
+├── api/
+│   ├── __init__.py
+│   └── main.py
+│
 ├── tests/
 │   ├── __init__.py
 │   ├── test_rate_limiter.py
-│   └── test_token_bucket.py
+│   ├── test_token_bucket.py
+│   └── test_api.py
 │
 ├── docs/
 │   ├── ARCHITECTURE.md
@@ -87,9 +111,28 @@ This package contains the production implementation of the project.
 
 ---
 
+### `api/`
+
+This directory contains the FastAPI integration layer introduced in **v0.6.0**.
+
+| File | Responsibility |
+|------|----------------|
+| `__init__.py` | Initializes the `api` package. |
+| `main.py` | Defines the FastAPI application, API endpoints, request model, and integration with the `RateLimiter`. |
+
+The API layer is responsible for HTTP-specific concerns while the core rate-limiting logic remains inside the `ratelimiter/` package.
+
+---
+
 ### `tests/`
 
-Contains automated unit tests for validating the behavior of the package.
+Contains automated tests for both the core rate-limiting package and the FastAPI integration.
+
+| File | Responsibility |
+|------|----------------|
+| `test_rate_limiter.py` | Tests the `RateLimiter` class and multi-user bucket management. |
+| `test_token_bucket.py` | Tests token consumption, rejection, and token refill behavior. |
+| `test_api.py` | Tests the FastAPI endpoints, request validation, API responses, and rate-limit behavior. |
 
 Separating tests from production code improves maintainability and makes it easier to extend the project while preventing regressions.
 
@@ -109,12 +152,12 @@ The root directory contains project-level configuration and documentation.
 
 | File | Purpose |
 |------|---------|
-| `README.md` | Project overview and quick start guide. |
+| `README.md` | Project overview, installation, usage, and API quick start guide. |
 | `CHANGELOG.md` | Release history. |
 | `PROJECT_TIMELINE.md` | Long-term roadmap. |
-| `pyproject.toml` | Python package configuration. |
+| `pyproject.toml` | Python package configuration and project metadata. |
 | `LICENSE` | MIT License. |
-| `.gitignore` | Git ignore rules. |
+| `.gitignore` | Prevents unnecessary files from being committed to Git. |
 
 ---
 
@@ -122,30 +165,98 @@ The root directory contains project-level configuration and documentation.
 
 The project follows the **Single Responsibility Principle (SRP)**, where each component has one clearly defined purpose.
 
-This separation makes the code easier to understand, test, maintain, and extend.
+Beginning with **v0.6.0**, the architecture is divided into two major layers:
+
+1. The **API integration layer**
+2. The **core rate-limiting package**
+
+The API layer handles HTTP-specific concerns, while the core package remains responsible for rate-limiting behavior.
+
+---
 
 ## Architecture Overview
 
-```
-                    Application
-                         │
-                         ▼
-                RateLimiter
-             (Request Manager)
-                         │
-         ┌───────────────┴───────────────┐
-         ▼                               ▼
-  User "Alice"                    User "Bob"
-         │                               │
-         ▼                               ▼
-  TokenBucket                     TokenBucket
-         │                               │
-         └───────────────┬───────────────┘
-                         ▼
-                 Token Refill Logic
+```text
+                         Client
+                           │
+                           │ HTTP
+                           ▼
+                    ┌──────────────┐
+                    │   FastAPI    │
+                    │  API Layer   │
+                    └──────┬───────┘
+                           │
+                           │ Python call
+                           ▼
+                    ┌──────────────┐
+                    │ RateLimiter  │
+                    │ Core Package │
+                    └──────┬───────┘
+                           │
+              ┌────────────┴────────────┐
+              ▼                         ▼
+       User "Alice"               User "Bob"
+              │                         │
+              ▼                         ▼
+       TokenBucket                 TokenBucket
+              │                         │
+              └────────────┬────────────┘
+                           ▼
+                   Token Refill Logic
 ```
 
-Each user owns an independent `TokenBucket`, while the `RateLimiter` manages bucket creation and request routing.
+The important architectural boundary is between the FastAPI integration and the `ratelimiter` package.
+
+The API layer does not implement rate-limiting rules itself. It delegates those decisions to the core package.
+
+---
+
+## `api/`
+
+### Responsibility
+
+The `api/` directory contains the FastAPI integration introduced in **v0.6.0**.
+
+The API layer is responsible for:
+
+- Creating the FastAPI application.
+- Defining HTTP routes.
+- Validating incoming request data.
+- Calling the core `RateLimiter`.
+- Converting rate-limiter results into HTTP responses.
+- Returning appropriate HTTP status codes.
+
+The API layer currently exposes:
+
+- `GET /`
+- `POST /allow`
+
+### Why Keep the API Layer Separate?
+
+FastAPI should handle HTTP concerns without becoming part of the core rate-limiting implementation.
+
+This allows the `ratelimiter` package to remain usable without requiring application code to interact directly with HTTP.
+
+The same core package can therefore be used:
+
+```text
+Direct Python Usage
+        │
+        ▼
+   RateLimiter
+```
+
+or:
+
+```text
+HTTP Client
+     │
+     ▼
+  FastAPI
+     │
+     ▼
+ RateLimiter
+```
 
 ---
 
@@ -153,23 +264,29 @@ Each user owns an independent `TokenBucket`, while the `RateLimiter` manages buc
 
 ### Responsibility
 
-The `RateLimiter` acts as the public interface of the package.
+The `RateLimiter` acts as the main public interface of the core package.
 
-It does **not** implement the Token Bucket algorithm itself.
+It is responsible for:
 
-Instead, it is responsible for:
-
-- Managing all users.
+- Managing users.
 - Creating buckets when a new user appears.
 - Reusing existing buckets.
 - Routing incoming requests to the correct bucket.
 - Protecting shared bucket storage using thread synchronization.
 
-### Why this separation?
+The `RateLimiter` does not implement HTTP handling.
 
-Separating request management from token management keeps the architecture modular.
+It also does not implement the Token Bucket algorithm itself.
 
-If the internal bucket implementation changes in the future (for example, Redis-backed buckets), the public interface can remain unchanged.
+Instead, it delegates token-level decisions to the appropriate `TokenBucket`.
+
+### Why This Separation?
+
+Separating request management from token management keeps the core package modular.
+
+The API layer can therefore change independently from the rate-limiting implementation.
+
+Similarly, future storage changes can occur without requiring the FastAPI endpoints to contain rate-limiting logic.
 
 ---
 
@@ -177,7 +294,7 @@ If the internal bucket implementation changes in the future (for example, Redis-
 
 ### Responsibility
 
-Each `TokenBucket` represents the rate limit state for a single user.
+Each `TokenBucket` represents the rate-limit state for a single user.
 
 It is responsible for:
 
@@ -186,111 +303,182 @@ It is responsible for:
 - Allowing or rejecting requests.
 - Ensuring thread-safe access to token state.
 
-### Why one bucket per user?
+The `TokenBucket` is independent of FastAPI.
 
-Maintaining an independent bucket for every user ensures that one user's traffic never affects another user's available tokens.
+It operates entirely within the core rate-limiting package.
 
-This approach naturally supports multi-user rate limiting while keeping the implementation simple.
+### Why One Bucket Per User?
+
+Maintaining an independent bucket for every user ensures that one user's traffic does not consume another user's available tokens.
+
+This provides isolated rate limiting while keeping the implementation straightforward.
 
 ---
 
 ## Relationship Between Components
 
-```
-Application
-      │
-      ▼
+The components communicate through clear boundaries:
+
+```text
+HTTP Request
+     │
+     ▼
+FastAPI
+     │
+     ▼
 RateLimiter
-      │
-      ▼
+     │
+     ▼
 Dictionary
 (user → TokenBucket)
-      │
-      ▼
+     │
+     ▼
 TokenBucket
-      │
-      ▼
-Token Refill
+     │
+     ▼
+Token Refill Logic
 ```
 
-The `RateLimiter` owns the collection of buckets, while each `TokenBucket` independently manages its own token state.
+The `api/` layer owns HTTP concerns.
 
-This separation reduces coupling between components and prepares the architecture for future storage backends such as Redis.
+The `RateLimiter` owns user-to-bucket management.
+
+Each `TokenBucket` owns the rate-limit state for one user.
+
+This separation reduces coupling and prepares the project for future storage backends such as Redis.
 
 ---
 
 # Request Lifecycle
 
-Every incoming request follows the same sequence of operations before being either **allowed** or **rejected**.
+At **v0.6.0**, requests can reach the rate-limiting core through two entry points:
 
-The following diagram illustrates the complete request flow.
+1. Direct Python library usage.
+2. The FastAPI HTTP integration.
 
-```
-               Incoming Request
-                       │
-                       ▼
-        RateLimiter.allow_request(user)
-                       │
-                       ▼
-          Does the user already exist?
-                 │             │
-               Yes             No
-                │               │
-                ▼               ▼
-      Retrieve Bucket     Create TokenBucket
-                │               │
-                └───────┬───────┘
-                        ▼
-          TokenBucket.allow_request()
-                        │
-                        ▼
-             Refill Available Tokens
-                        │
-                        ▼
-         Is at least one token available?
-                 │               │
-               Yes               No
-                │                │
-                ▼                ▼
-        Consume One Token    Reject Request
-                │
-                ▼
-          Return True
-```
+Both paths eventually use the same `RateLimiter` and `TokenBucket` implementation.
+
+This ensures that the HTTP API does not duplicate or redefine the core rate-limiting logic.
 
 ---
 
-## Step-by-Step Flow
+## HTTP Request Lifecycle
 
-### Step 1 — Receive Request
+When a client uses the FastAPI integration, the request follows this flow:
 
-The application sends a request to the `RateLimiter`.
+```text
+HTTP Client
+     │
+     │ POST /allow
+     │
+     ▼
+FastAPI
+     │
+     │ Validate Request
+     ▼
+Request Model
+     │
+     │ Extract User
+     ▼
+RateLimiter.allow_request(user)
+     │
+     ▼
+Does the user already exist?
+     │
+     ├───────────────┐
+     │               │
+    Yes              No
+     │               │
+     ▼               ▼
+Retrieve Bucket   Create TokenBucket
+     │               │
+     └───────┬───────┘
+             ▼
+   TokenBucket.allow_request()
+             │
+             ▼
+      Refill Available Tokens
+             │
+             ▼
+ Is at least one token available?
+        │             │
+       Yes            No
+        │             │
+        ▼             ▼
+Consume Token     Reject Request
+        │             │
+        ▼             ▼
+   Return True    Return False
+        │             │
+        ▼             ▼
+ HTTP 200         HTTP 429
+```
+
+The FastAPI layer handles the HTTP-specific part of the request and delegates the actual rate-limiting decision to the core package.
+
+---
+
+## Step-by-Step HTTP Flow
+
+### Step 1 — Receive HTTP Request
+
+A client sends a request to the FastAPI application.
 
 Example:
 
-```python
-limiter.allow_request("Alice")
+```http
+POST /allow
+```
+
+with a request body:
+
+```json
+{
+  "user": "Alice"
+}
 ```
 
 ---
 
-### Step 2 — Locate the User Bucket
+### Step 2 — Validate Request
+
+FastAPI validates the incoming request using the request model defined by the API layer.
+
+The request must contain the required user information before the request reaches the rate-limiting core.
+
+---
+
+### Step 3 — Call the RateLimiter
+
+After validation, the API extracts the user identifier and calls:
+
+```python
+limiter.allow_request(user)
+```
+
+The API does not implement token counting or refill logic itself.
+
+---
+
+### Step 4 — Locate the User Bucket
 
 The `RateLimiter` checks whether a `TokenBucket` already exists for the user.
 
-If no bucket exists, a new one is created automatically.
+If the user already has a bucket, the existing bucket is reused.
+
+If the user is new, a new `TokenBucket` is created.
 
 ---
 
-### Step 3 — Delegate the Decision
+### Step 5 — Delegate to TokenBucket
 
 The request is forwarded to the corresponding `TokenBucket`.
 
-From this point onward, the `RateLimiter` is no longer involved.
+The bucket is responsible for deciding whether the request can be allowed.
 
 ---
 
-### Step 4 — Refill Tokens
+### Step 6 — Refill Tokens
 
 Before processing the request, the bucket calculates how much time has elapsed since the previous refill.
 
@@ -300,14 +488,117 @@ This strategy is known as **lazy refill**.
 
 ---
 
-### Step 5 — Allow or Reject
+### Step 7 — Allow or Reject
 
 After the refill:
 
 - If at least one token is available, one token is consumed and the request is allowed.
-- Otherwise, the request is rejected.
+- If no token is available, the request is rejected.
 
-The result is returned back to the application.
+The resulting decision is returned to the API layer.
+
+---
+
+### Step 8 — Convert Result to HTTP Response
+
+The FastAPI layer converts the rate-limiter decision into an HTTP response.
+
+A successful request returns a successful HTTP response containing the request result.
+
+A rate-limited request returns:
+
+```text
+HTTP 429 Too Many Requests
+```
+
+The HTTP layer therefore translates the core package's result into an API-level response without changing the underlying rate-limiting behavior.
+
+---
+
+# Direct Python Request Lifecycle
+
+The core package can also be used without FastAPI.
+
+In this case, the application calls the `RateLimiter` directly:
+
+```python
+limiter.allow_request("Alice")
+```
+
+The flow is:
+
+```text
+Python Application
+       │
+       ▼
+RateLimiter.allow_request(user)
+       │
+       ▼
+Does the user already exist?
+       │
+       ├───────────────┐
+       │               │
+      Yes              No
+       │               │
+       ▼               ▼
+Retrieve Bucket    Create TokenBucket
+       │               │
+       └───────┬───────┘
+               ▼
+      TokenBucket.allow_request()
+               │
+               ▼
+       Refill Available Tokens
+               │
+               ▼
+   Is at least one token available?
+          │             │
+         Yes            No
+          │             │
+          ▼             ▼
+   Consume Token    Reject Request
+          │             │
+          ▼             ▼
+        True         False
+```
+
+The core behavior is identical to the HTTP path.
+
+The only difference is the entry point.
+
+---
+
+# Core Request Lifecycle
+
+Regardless of how a request enters the system, the core rate-limiting process remains:
+
+```text
+RateLimiter
+     │
+     ▼
+Find or Create User Bucket
+     │
+     ▼
+TokenBucket
+     │
+     ▼
+Refill Tokens
+     │
+     ▼
+Check Available Tokens
+     │
+     ├───────────────┐
+     │               │
+   Available      Unavailable
+     │               │
+     ▼               ▼
+Consume Token      Reject
+     │               │
+     ▼               ▼
+  Allowed         Rejected
+```
+
+This shared core flow is important because the API layer does not contain a separate rate-limiting implementation.
 
 ---
 
@@ -315,11 +606,14 @@ The result is returned back to the application.
 
 The request lifecycle keeps responsibilities separated.
 
-- The `RateLimiter` focuses on request routing.
-- The `TokenBucket` focuses on rate-limiting logic.
-- The refill mechanism remains internal to the bucket.
+- **FastAPI** handles HTTP routing and request validation.
+- `RateLimiter` handles user-to-bucket management.
+- `TokenBucket` handles token availability and refill behavior.
+- The API layer converts the core decision into an HTTP response.
 
-This design improves readability, simplifies testing, and prepares the project for future extensions such as Redis-backed storage and HTTP APIs.
+This separation allows the same rate-limiting logic to be reused by different interfaces without duplicating implementation.
+
+It also provides a stable foundation for future integrations such as Redis-backed storage.
 
 ---
 
@@ -398,6 +692,10 @@ This approach provides several advantages:
 - Improved scalability
 - Clear ownership of shared state
 
+The fine-grained locking strategy protects the in-memory state while allowing requests for different users to proceed concurrently.
+
+The FastAPI integration introduced in **v0.6.0** uses the same thread-safe `RateLimiter` implementation. The API layer does not introduce a separate concurrency mechanism for rate limiting.
+
 As the project evolves, this architecture will make it easier to replace the in-memory storage with external systems such as Redis without significantly changing the public API.
 
 ---
@@ -408,8 +706,9 @@ The current implementation guarantees thread safety only within a **single Pytho
 
 It does **not** synchronize state across multiple processes or machines.
 
-Distributed synchronization will be introduced in future releases using Redis.
+The FastAPI integration does not change this limitation. Multiple API workers or application instances would maintain separate in-memory rate-limiter state.
 
+Distributed synchronization is planned for **v0.7.0** through the Redis backend.
 ---
 
 # Future Architecture
@@ -421,47 +720,51 @@ Instead of redesigning the project for every new feature, each release extends t
 The following roadmap illustrates how the system will grow.
 
 ```
-                    Client
-                       │
-                       ▼
-                 FastAPI Service
-                       │
-                       ▼
-                 RateLimiter API
-                       │
-                       ▼
-                RateLimiter Package
-                       │
-             ┌─────────┴─────────┐
-             ▼                   ▼
-      Redis Storage        Local Memory
-             │
-             ▼
-      TokenBucket State
+                         Client
+                           │
+                           ▼
+                    FastAPI Service
+                           │
+                           ▼
+                     RateLimiter
+                           │
+                           ▼
+                    Storage Backend
+                      │         │
+                      │         │
+                      ▼         ▼
+                In-Memory      Redis
+                 (Current)    (v0.7.0)
 ```
 
 ---
 
-## v0.6.0 — FastAPI Integration
+## ✅ v0.6.0 — FastAPI Integration
 
-The `RateLimiter` package will be exposed through REST endpoints.
+FastAPI integration has been implemented as an HTTP interface around the existing `RateLimiter` package.
 
-Example:
+The API currently exposes:
 
+```text
+GET  /
+POST /allow
 ```
-POST /request/{user}
-```
 
-The API layer will remain thin.
+The `POST /allow` endpoint accepts a user identifier through the request body and delegates the rate-limiting decision to the existing `RateLimiter`.
 
-Its responsibility will be:
+The API layer remains intentionally thin.
 
-- Accept HTTP requests
-- Validate input
-- Call the package
-- Return responses
+Its responsibilities are:
 
-The rate-limiting logic will continue to reside inside the `ratelimiter` package.
+- Accept HTTP requests.
+- Validate request data.
+- Call the `RateLimiter`.
+- Convert the result into an HTTP response.
+- Return appropriate HTTP status codes.
+
+The rate-limiting logic remains inside the `ratelimiter` package.
+
+This architecture allows the core package to continue functioning independently from the FastAPI integration.
 
 ---
 
@@ -469,9 +772,11 @@ The rate-limiting logic will continue to reside inside the `ratelimiter` package
 
 The current implementation stores buckets in memory.
 
+The FastAPI integration introduced in v0.6.0 currently uses the same in-memory `RateLimiter` state.
+
 This means the application loses all rate-limiting state after a restart.
 
-In v0.7.0, bucket storage will become pluggable.
+In v0.7.0, bucket storage will be moved from local in-memory state to Redis.
 
 Instead of storing user buckets inside a local dictionary, the application will persist bucket state in Redis.
 
@@ -479,7 +784,7 @@ Benefits include:
 
 - Shared state across application instances
 - Horizontal scalability
-- Persistent bucket storage
+- Externalized bucket storage
 - Preparation for distributed deployments
 
 ---
@@ -549,8 +854,143 @@ Throughout every release, the architecture follows several guiding principles:
 - Modularity
 - Maintainability
 - Extensibility
+- Integration-layer separation
 - Incremental evolution
+
+---
+
+## Separation of Concerns
+
+Each component should have a clearly defined responsibility.
+
+The FastAPI layer handles HTTP concerns, while the `ratelimiter` package handles rate-limiting behavior.
+
+This prevents web-framework-specific logic from becoming part of the core algorithm.
+
+---
+
+## Single Responsibility Principle
+
+Each major component is responsible for one primary concern.
+
+```text
+FastAPI
+  → HTTP interface
+
+RateLimiter
+  → User and bucket management
+
+TokenBucket
+  → Token state and rate-limiting decisions
+```
+
+Keeping these responsibilities separate makes individual components easier to understand, test, and modify.
+
+---
+
+## Integration-Layer Separation
+
+The FastAPI integration introduced in **v0.6.0** is treated as an integration layer around the core package.
+
+The API communicates with the `RateLimiter` through its public interface rather than implementing rate-limiting behavior itself.
+
+This allows the same core package to be used through different interfaces without duplicating the underlying logic.
+
+---
+
+## Modularity
+
+The project is divided into focused modules and packages rather than keeping all functionality in a single file.
+
+The current structure separates:
+
+- Core rate-limiting logic.
+- FastAPI integration.
+- Automated tests.
+- Technical documentation.
+
+This structure provides a foundation for future architectural changes.
+
+---
+
+## Maintainability
+
+The architecture favors simple components with clear responsibilities over unnecessary abstraction.
+
+New functionality should be introduced only when it provides a clear architectural or functional benefit.
+
+---
+
+## Extensibility
+
+The current architecture is designed to accommodate future integrations.
+
+For example, the current in-memory storage can eventually be replaced by Redis without requiring the FastAPI layer to implement the storage mechanism itself.
+
+---
+
+## Incremental Evolution
+
+The project is intentionally developed through versioned milestones.
+
+Each release introduces a major engineering concept:
+
+```text
+v0.1.0 → Core Algorithm
+v0.2.0 → Multi-User Support
+v0.3.0 → Thread Safety
+v0.4.0 → Automated Testing
+v0.5.0 → Python Packaging
+v0.6.0 → FastAPI Integration
+v0.7.0 → Redis Backend
+v0.8.0 → Docker
+v0.9.0 → CI/CD
+v1.0.0 → Production Ready
+```
 
 Rather than implementing every feature from the beginning, the project evolves through small, well-defined engineering milestones.
 
-This approach mirrors how production software is commonly developed and maintained.
+This approach allows each architectural change to be implemented, tested, documented, and understood before the next major capability is introduced.
+
+---
+
+## Architectural Direction
+
+The architecture currently follows this direction:
+
+```text
+Client
+  │
+  ▼
+FastAPI
+  │
+  ▼
+RateLimiter
+  │
+  ▼
+TokenBucket
+  │
+  ▼
+In-Memory State
+```
+
+Future releases will extend the lower layers without unnecessarily changing the API boundary:
+
+```text
+Client
+  │
+  ▼
+FastAPI
+  │
+  ▼
+RateLimiter
+  │
+  ▼
+Storage Backend
+  │
+  ├── In-Memory
+  │
+  └── Redis (v0.7.0)
+```
+
+The goal is to evolve the implementation while preserving clear boundaries between interfaces, core logic, and infrastructure.

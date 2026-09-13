@@ -16,7 +16,7 @@ The goal of this project is to build a production-ready rate limiter incremental
 | ✅ v0.4.0 | Testing & Quality             | Completed |
 | ✅ v0.5.0 | Packaging & Project Structure | Completed |
 | ✅ v0.6.0 | FastAPI Integration           | Completed |
-| 🔄 v0.7.0 | Redis Backend                 | Planned   |
+| ✅ v0.7.0 | Redis Backend                 | Completed |
 | 🔄 v0.8.0 | Docker                        | Planned   |
 | 🔄 v0.9.0 | CI/CD                         | Planned   |
 | 🎯 v1.0.0 | Production-Ready Release      | Goal      |
@@ -75,18 +75,15 @@ The project now supports concurrent access using `threading.Lock`. Shared resour
 ## ✅ v0.4.0 — Testing & Quality
 
 ### Objectives
-
 - Introduce automated testing using Python's `unittest` framework.
 - Replace manual verification with repeatable automated tests.
 - Validate the behavior of both `RateLimiter` and `TokenBucket`.
 - Organize tests separately from the implementation.
 
 ### Outcome
-
 The project now includes automated unit tests that verify the core functionality of the rate limiter. Both the `RateLimiter` and `TokenBucket` classes are covered by dedicated test suites, improving confidence in future changes and reducing the risk of regressions.
 
 ### Features Implemented
-
 - Automated unit testing using Python's `unittest`
 - Dedicated `RateLimiter` test suite
 - Dedicated `TokenBucket` test suite
@@ -96,7 +93,6 @@ The project now includes automated unit tests that verify the core functionality
 - Token refill verification
 
 ### Concepts Learned
-
 - Unit testing
 - Test automation
 - Regression testing
@@ -119,9 +115,7 @@ The project now includes automated unit tests that verify the core functionality
 - Module design
 
 ### Outcome
-
 The project was successfully reorganized into a reusable Python package with a dedicated `ratelimiter/` package, modern packaging configuration through `pyproject.toml`, and separate directories for tests and documentation.
-
 The package can now be installed locally using standard Python packaging tools.
 
 ---
@@ -129,7 +123,6 @@ The package can now be installed locally using standard Python packaging tools.
 ## ✅ v0.6.0 — FastAPI Integration
 
 ### Objectives
-
 - Expose the rate limiter through HTTP APIs.
 - Integrate the existing `RateLimiter` package with FastAPI.
 - Keep the core rate-limiting logic independent from the web framework.
@@ -137,7 +130,6 @@ The package can now be installed locally using standard Python packaging tools.
 - Add API-level testing alongside the existing unit tests.
 
 ### Features Implemented
-
 - Added FastAPI integration through the `api/` directory.
 - Added `api/main.py` containing the FastAPI application.
 - Added a root `GET /` endpoint.
@@ -149,13 +141,10 @@ The package can now be installed locally using standard Python packaging tools.
 - Added API tests for successful requests, rate-limit rejection, validation errors, and independent users.
 
 ### Outcome
-
 The project now exposes the reusable rate limiter through a FastAPI-based HTTP layer while keeping the underlying `RateLimiter` and `TokenBucket` components independent from the web framework.
-
 The v0.6.0 milestone extends the project from a standalone Python package into a backend component that can be consumed through HTTP APIs.
 
 ### Concepts Learned
-
 - FastAPI
 - HTTP API design
 - HTTP request and response handling
@@ -166,17 +155,50 @@ The v0.6.0 milestone extends the project from a standalone Python package into a
 
 ---
 
-## 🔄 v0.7.0 — Redis Backend
+## ✅ v0.7.0 — Redis Backend
 
 ### Objectives
-- Replace in-memory bucket storage with Redis.
-- Enable shared state across multiple application instances.
-- Prepare for horizontal scalability.
+- Introduce a backend abstraction for rate-limit storage.
+- Preserve the existing in-memory backend.
+- Add Redis-backed bucket state.
+- Perform Redis-backed rate-limit processing atomically.
+- Support external shared rate-limit state through Redis.
+- Introduce TTL-based cleanup for Redis bucket state.
 
 ### Key Learning Objectives
+- Backend abstraction
 - Redis
-- Shared storage
-- Distributed state management
+- Shared external state
+- Lua scripting
+- Atomic operations
+- Distributed state concepts
+
+### Features Implemented
+- Added the `RateLimiterBackend` abstraction.
+- Added `InMemoryBackend` as the default in-memory implementation.
+- Added `RedisBackend` for Redis-backed rate limiting.
+- Moved in-memory bucket management into `InMemoryBackend`.
+- Added Redis-backed bucket state using Redis hashes.
+- Added Redis Lua scripting for atomic refill and request processing.
+- Added Redis `TIME` for Redis-side time calculation.
+- Added TTL-based cleanup for Redis bucket state.
+- Added dependency injection for the Redis client.
+- Added automated Redis backend tests, including concurrent request testing.
+
+### Outcome
+The project now supports multiple rate-limit storage backends through a common backend interface.
+The existing in-memory implementation remains available, while the Redis backend provides externally stored bucket state and atomic Redis-side rate-limit processing.
+This establishes a foundation for sharing rate-limit state across multiple application instances, although a complete distributed deployment has not yet been demonstrated.
+
+### Concepts Learned
+- Backend abstraction
+- Interface-based design
+- Redis data structures
+- Lua scripting
+- Atomic operations
+- External state management
+- TTL-based cleanup
+- Distributed systems fundamentals
 
 ---
 
@@ -185,7 +207,7 @@ The v0.6.0 milestone extends the project from a standalone Python package into a
 ### Objectives
 - Containerize the application.
 - Create Docker images.
-- Simplify deployment across environments.
+- Simplify application deployment across environments.
 
 ### Key Learning Objectives
 - Docker
@@ -204,7 +226,7 @@ The v0.6.0 milestone extends the project from a standalone Python package into a
 ### Key Learning Objectives
 - GitHub Actions
 - Continuous Integration
-- Continuous Deployment
+- Automated testing workflows
 
 ---
 
@@ -217,16 +239,13 @@ The v0.6.0 milestone extends the project from a standalone Python package into a
 - Stable public release.
 
 ### Expected Outcome
-A well-tested, maintainable, scalable, and production-oriented Python Rate Limiter demonstrating the complete engineering journey from a simple algorithm to a deployable backend component.
+A well-tested, maintainable, deployment-ready, and production-focused Python Rate Limiter demonstrating the complete engineering journey from a simple algorithm to a deployable backend component.
 
 ---
 
 # Learning Journey
 
 This project is intentionally built through versioned milestones.
-
 Each release introduces one major software engineering concept instead of implementing everything at once. The objective is not only to build a rate limiter but also to understand the engineering decisions behind it.
-
 The roadmap may evolve as the project grows, but every release focuses on one major engineering milestone. This incremental approach encourages learning the reasoning behind each feature instead of simply adding functionality.
-
 The long-term objective is not just to build a rate limiter, but to understand how production software evolves through architecture, testing, packaging, APIs, infrastructure, and deployment.

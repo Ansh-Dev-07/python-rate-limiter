@@ -6,7 +6,7 @@ Testing is an essential part of software engineering. As the project evolves thr
 
 Unlike the README, which introduces the project, or the architecture and design documents, this guide focuses entirely on verifying correctness and maintaining software quality.
 
-Current Testing Version: **v0.6.0**
+Current Testing Version: **v0.7.0**
 
 ---
 
@@ -16,7 +16,7 @@ The testing strategy for this project is based on one simple principle:
 
 > **Every feature should be verifiable through automated tests.**
 
-Instead of relying on manual execution and visual inspection, the project uses repeatable unit tests to validate the behavior of the core components.
+Instead of relying on manual execution and visual inspection, Instead of relying on manual execution and visual inspection, the project uses repeatable automated tests to validate the behavior of its core components and integration layers.
 
 This approach provides several benefits:
 
@@ -41,16 +41,22 @@ python-rate-limiter/
 │
 ├── ratelimiter/
 │   ├── rate_limiter.py
-│   └── token_bucket.py
+│   ├── token_bucket.py
+│   └── backends/
+│       ├── base.py
+│       ├── in_memory.py
+│       └── redis_backend.py
 │
 └── tests/
     ├── __init__.py
     ├── test_rate_limiter.py
     ├── test_token_bucket.py
-    └── test_api.py
+    ├── test_api.py
+    └── test_redis_backend.py
 ```
 
 Separating tests from the implementation improves maintainability and makes the project easier to understand as it grows.
+The test suite is organized by the component or integration layer being verified.
 
 ---
 
@@ -63,15 +69,15 @@ Each test module focuses on a specific component of the project.
 | `test_rate_limiter.py` | Verifies the behavior of the `RateLimiter` class, including bucket creation, multi-user handling, and constructor validation. |
 | `test_token_bucket.py` | Verifies the Token Bucket algorithm, including token consumption, request rejection, and automatic token refill. |
 | `test_api.py` | Verifies the FastAPI integration, including the root endpoint, successful requests, rate-limit rejection (`429`), request validation (`422`), and independent buckets for different users. |
+| `test_redis_backend.py` | Verifies the Redis backend, including bucket creation, capacity handling, token refill, independent users, validation, concurrent requests, and bucket expiration. |
 
-This separation follows the same design philosophy as the production code—each file has a single responsibility.
+This separation follows the same design philosophy as the production code: each test module focuses on a specific component or integration boundary.
 
 ---
 
 ## Current Testing Scope
 
-At **v0.6.0**, the automated test suite validates:
-
+At **v0.7.0**, the automated test suite validates:
 - Constructor input validation.
 - Token consumption.
 - Request acceptance.
@@ -84,8 +90,13 @@ At **v0.6.0**, the automated test suite validates:
 - HTTP `429` responses when the rate limit is exceeded.
 - Request validation for missing or invalid `user` fields.
 - Independent rate-limiting behavior for different users through the API.
-
-The tests focus on validating observable behavior rather than internal implementation details.
+- Redis bucket creation and state persistence.
+- Redis token refill behavior.
+- Redis user isolation.
+- Redis-backed concurrent request handling.
+- Redis bucket expiration through TTL.
+The tests focus on validating observable behavior rather than unnecessarily coupling tests to internal implementation details.
+The current suite contains **23 automated tests**, including **8 Redis backend integration tests**.
 
 ---
 
@@ -116,20 +127,20 @@ All tests are located inside the `tests/` directory and can be executed using Py
 From the project root directory, execute:
 
 ```bash
-python -m unittest discover tests
+python -m unittest discover
 ```
 
 Example output:
 
 ```text
-..................
+.......................
 ----------------------------------------------------------------------
-Ran XX tests in X.XXXs
+Ran 23 tests in XX.XXXs
 
 OK
 ```
 
-A successful execution confirms that all implemented features behave as expected.
+A successful execution confirms that the implemented unit, API, and Redis integration tests pass.
 
 ---
 
@@ -155,6 +166,24 @@ python -m unittest tests.test_api
 
 Running individual test modules is useful while developing or debugging a specific component.
 
+To execute the Redis backend tests:
+
+```bash
+python -m unittest tests.test_redis_backend
+```
+
+Example successful output:
+
+```text
+........
+----------------------------------------------------------------------
+Ran 8 tests in XX.XXXs
+
+OK
+```
+
+The Redis tests require a running Redis-compatible server.
+
 ---
 
 ## Running Tests Verbosely
@@ -162,7 +191,7 @@ Running individual test modules is useful while developing or debugging a specif
 For more detailed output, use verbose mode:
 
 ```bash
-python -m unittest discover tests -v
+python -m unittest discover -v
 ```
 
 Example:
@@ -175,7 +204,7 @@ test_invalid_capacity_raises_error ... ok
 ...
 
 ----------------------------------------------------------------------
-Ran XX tests
+Ran 23 tests in XX.XXXs
 
 OK
 ```
@@ -213,8 +242,8 @@ The `RateLimiter` class is tested for the following scenarios.
 | Test Case | Purpose |
 |-----------|---------|
 | Constructor validation | Ensures invalid capacity and refill rate values raise exceptions. |
-| New user requests | Verifies that a new user receives a fresh `TokenBucket`. |
-| Existing user requests | Ensures an existing user's bucket is reused instead of creating a new one. |
+| New user requests | Verifies that a new user receives new rate-limit bucket state through the configured backend. |
+| Existing user requests | Ensures an existing user's rate-limit state is reused by the configured backend. |
 | Multi-user isolation | Confirms that each user maintains an independent bucket. |
 
 ---
@@ -229,6 +258,22 @@ The `TokenBucket` class is tested for the following scenarios.
 | Token consumption | Ensures tokens are consumed correctly after each request. |
 | Capacity exhaustion | Confirms requests are rejected after all available tokens have been consumed. |
 | Automatic refill | Verifies that tokens are replenished after sufficient time has elapsed. |
+
+---
+
+## RedisBackend Test Coverage
+
+The `RedisBackend` is tested for the following scenarios.
+
+| Test Case | Purpose |
+|-----------|---------|
+| New user request | Verifies that a new Redis-backed bucket is created with the expected initial state. |
+| Capacity exhaustion | Confirms requests are rejected after the available tokens have been consumed. |
+| Token refill | Verifies that tokens are replenished after sufficient time has elapsed. |
+| Independent users | Confirms that different users maintain independent Redis-backed bucket state. |
+| Constructor validation | Ensures invalid capacity and refill rate values raise exceptions. |
+| Concurrent requests | Verifies that concurrent requests are processed correctly through the Redis backend. |
+| Bucket expiration | Confirms that inactive Redis bucket state expires through TTL. |
 
 ---
 
@@ -264,16 +309,16 @@ This approach makes the tests more resilient to internal refactoring while ensur
 
 ## Current Limitations
 
-The current automated test suite covers the core rate-limiting implementation and the FastAPI integration.
+The current automated test suite covers the core rate-limiting implementation, FastAPI integration, and Redis backend integration.
 
 It does not yet include:
 
 - Performance benchmarks.
 - Load testing.
 - Stress testing.
-- Redis backend testing.
 - Docker environment testing.
 - Distributed deployment testing.
+- Redis failure and recovery testing.
 
 These areas will be introduced gradually as new project milestones are completed.
 
@@ -323,20 +368,18 @@ A reader should understand the purpose of the test without opening its implement
 
 ---
 
-## Test Independence
+## Test Setup and Independence
 
-Each test should create its own environment using the `setUp()` method.
-
-This prevents one test from affecting another and ensures consistent, repeatable results.
-
-Example:
+Each test should create or reset the state it depends on so that tests remain independent.
+For tests that require a shared test fixture, `setUp()` can be used to create a fresh environment before each test.
+For example:
 
 ```python
 def setUp(self):
     self.limiter = RateLimiter(capacity=5, refill_rate=1)
 ```
 
-By creating a fresh instance before every test, the test suite remains reliable regardless of execution order.
+By using isolated test state, the test suite remains reliable regardless of execution order.
 
 ---
 
@@ -389,8 +432,7 @@ The long-term objective is to build a comprehensive testing strategy that suppor
 
 ## v0.6.0 — FastAPI Integration
 
-FastAPI integration was introduced as an HTTP layer around the existing rate-limiting package.
-
+FastAPI integration was introduced as an HTTP layer around the rate-limiting package.
 The API test suite was added to verify the behavior of this integration while keeping the existing unit tests for `RateLimiter` and `TokenBucket` independent from the API layer.
 
 The current API tests cover:
@@ -410,17 +452,16 @@ The existing unit tests continue validating the core `RateLimiter` and `TokenBuc
 
 ## v0.7.0 — Redis Backend
 
-Introducing Redis changes the storage layer of the application.
-
-Additional tests will verify:
-
+Redis backend integration testing was introduced alongside the Redis backend.
+The Redis test suite verifies:
 - Redis bucket creation.
-- Token persistence.
-- Shared bucket state.
-- Redis connection handling.
-- Failure recovery scenarios.
-
-These tests will ensure that replacing in-memory storage does not change the public behavior of the package.
+- Token state persistence.
+- Token refill behavior.
+- Independent user state.
+- Constructor validation.
+- Concurrent request handling.
+- Bucket expiration through TTL.
+The Redis tests ensure that the Redis-backed implementation preserves the expected rate-limiting behavior while using external state.
 
 ---
 
@@ -467,14 +508,13 @@ Continuous Integration helps detect regressions before changes are merged into t
 
 As the project approaches **v1.0.0**, the testing strategy may expand to include:
 
-- Integration testing.
 - Performance benchmarking.
 - Load testing.
 - Stress testing.
-- Concurrency testing.
+- Expanded concurrency testing.
+- Redis failure and recovery testing.
 - Expanded API integration testing.
-
-These additional testing layers will complement the existing unit tests and provide greater confidence in the project's reliability.
+- Deployment and environment testing.
 
 ---
 
@@ -491,33 +531,23 @@ The goal is not simply to increase the number of tests, but to ensure that every
 # Summary
 
 Testing plays a fundamental role in the development of the **Python Rate Limiter** project.
-
-Beginning with **v0.4.0**, automated unit tests became an integral part of the development process, ensuring that new features could be added with confidence while preserving the correctness of existing functionality.
-
+Beginning with **v0.4.0**, automated tests became an integral part of the development process, ensuring that new features could be added with confidence while preserving the correctness of existing functionality.
 Throughout this document, we explored:
-
 - The testing philosophy adopted by the project.
 - The organization of the test suite.
 - How to execute automated tests.
 - The current scope of test coverage.
 - Guidelines for writing new tests.
 - The long-term testing roadmap.
-
-The project currently focuses on **behavior-focused unit testing**, validating the public interface of the package rather than its internal implementation details.
-
-This approach keeps the tests maintainable and resilient to future refactoring.
-
-As the project evolves, the testing strategy will expand alongside new architectural milestones. The current v0.6.0 release has already introduced FastAPI integration testing, while future milestones will add:
-
-- Redis backend testing.
-- Docker environment validation.
-- Continuous Integration with GitHub Actions.
-- Performance and load testing.
-
+The project currently focuses on **behavior-focused testing**, validating the public behavior of the package while using targeted integration tests where external components such as FastAPI and Redis are involved.
+At **v0.7.0**, the test suite contains **23 automated tests**, including:
+- `TokenBucket` tests.
+- `RateLimiter` tests.
+- FastAPI integration tests.
+- Redis backend integration tests.
+The Redis backend tests additionally verify concurrency, token refill, independent users, and TTL-based bucket expiration.
+As the project evolves, the testing strategy will expand alongside new architectural milestones, including Docker deployment, Continuous Integration with GitHub Actions, performance testing, load testing, and additional failure and recovery scenarios.
 The objective is not simply to increase the number of tests, but to ensure that every major feature is accompanied by reliable, repeatable, and automated verification.
-
 A well-tested project is easier to maintain, easier to extend, and inspires greater confidence in both developers and users.
-
-Ultimately, testing is not treated as a separate phase of development—it is considered an essential part of building reliable software from the very beginning.
-
+Ultimately, testing is not treated as a separate phase of development—it is considered an essential part of building reliable software from the beginning.
 ---

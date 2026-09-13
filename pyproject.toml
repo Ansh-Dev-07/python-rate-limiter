@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "python-rate-limiter"
-version = "0.6.0"
+version = "0.7.0"
 description = "A thread-safe token bucket rate limiter implemented in Python."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -30,5 +30,12 @@ classifiers = [
 
 dependencies = [
     "fastapi",
-    "uvicorn"
+    "uvicorn",
+    "redis"
+]
+
+[tool.setuptools.packages.find]
+include = [
+    "ratelimiter*",
+    "api*"
 ]

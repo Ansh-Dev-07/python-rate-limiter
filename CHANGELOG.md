@@ -1,15 +1,54 @@
 # Changelog
 
 All notable changes to this project are documented in this file.
-
 The project follows [Semantic Versioning](https://semver.org/) to manage releases.
+
+---
+
+## [v0.7.0] - 2026-09-14
+
+### Added
+- Added the `RateLimiterBackend` abstraction for pluggable rate-limit backends.
+- Added `InMemoryBackend` for the existing in-memory bucket implementation.
+- Added `RedisBackend` for Redis-backed rate limiting.
+- Added Redis-backed bucket state using Redis hashes.
+- Added Redis Lua scripting for atomic rate-limit processing.
+- Added Redis `TIME` for Redis-side time calculation.
+- Added TTL-based cleanup for Redis bucket state.
+- Added Redis backend integration tests.
+- Added concurrent request testing for the Redis backend.
+
+### Changed
+- Refactored `RateLimiter` to delegate request processing to a configured backend.
+- Moved in-memory bucket management from `RateLimiter` into `InMemoryBackend`.
+- Preserved the existing in-memory implementation as the default backend when no backend is explicitly provided.
+- Extended the project from a single storage implementation to a backend-based architecture.
+- Added Redis as an alternative storage backend without changing the public `RateLimiter` interface.
+
+### Documentation
+- Added `REDIS_BACKEND.md`.
+- Updated `ARCHITECTURE.md` to document the backend abstraction and Redis request flow.
+- Updated `DESIGN_DECISIONS.md` with backend and Redis design decisions.
+- Updated `TESTING.md` with Redis backend testing.
+- Updated `TOKEN_BUCKET.md` to reflect the current v0.7.0 implementation.
+- Updated the project roadmap and version history.
+
+### Known Limitations
+- The in-memory backend maintains state only within a single Python process.
+- No complete multi-server or distributed deployment has been demonstrated.
+- No Redis health checks.
+- No automatic Redis reconnection or failure recovery.
+- No Redis authentication/TLS configuration management.
+- No dedicated Redis configuration management.
+- No Docker support.
+- No CI/CD pipeline.
+- Package not yet published to PyPI.
 
 ---
 
 ## [v0.6.0] - 2026-08-24
 
 ### Added
-
 - Added FastAPI integration as an HTTP layer around the existing rate-limiting package.
 - Added `api/` directory for the HTTP integration.
 - Added `api/main.py` containing the FastAPI application.
@@ -22,14 +61,12 @@ The project follows [Semantic Versioning](https://semver.org/) to manage release
 - Added API tests covering successful requests, rate-limit rejection, validation errors, and independent users.
 
 ### Changed
-
 - Extended the project from a reusable Python package into a package with an HTTP integration layer.
 - Kept the core `RateLimiter` and `TokenBucket` implementation independent from FastAPI.
 - Updated project documentation to reflect the v0.6.0 architecture and API integration.
 - Updated testing documentation to include FastAPI integration testing.
 
 ### Documentation
-
 - Updated `README.md` for v0.6.0.
 - Updated `ARCHITECTURE.md` to document the FastAPI integration and request flow.
 - Updated `TOKEN_BUCKET.md` to reflect the current v0.6.0 implementation.
@@ -38,7 +75,6 @@ The project follows [Semantic Versioning](https://semver.org/) to manage release
 - Updated the project roadmap and version history.
 
 ### Known Limitations
-
 - In-memory storage only.
 - No automatic cleanup of inactive buckets.
 - No Redis backend.

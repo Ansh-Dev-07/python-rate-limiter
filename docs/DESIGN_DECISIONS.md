@@ -10,7 +10,7 @@ Every software project involves trade-offs. There are usually multiple valid sol
 
 The decisions documented here were made after considering simplicity, maintainability, scalability, learning objectives, and future extensibility.
 
-Current Version: **v0.6.0**
+Current Version: **v0.7.0**
 
 ---
 
@@ -127,7 +127,9 @@ Although this introduces a small amount of additional computation, the overhead 
 
 The core Token Bucket algorithm is expected to remain unchanged throughout future releases.
 
-Upcoming versions may change how bucket state is stored (for example, Redis), but the algorithm itself will continue to be the foundation of the project.
+The project may introduce additional storage and infrastructure mechanisms, but the underlying rate-limiting algorithm will continue to use the Token Bucket model.
+
+This separation allows implementation details such as storage and deployment to evolve without changing the fundamental rate-limiting behavior.
 
 ---
 
@@ -203,28 +205,25 @@ This approach provides an excellent balance between efficiency and implementatio
 
 ## Trade-offs
 
-The bucket is updated only when it is accessed.
+The bucket's stored token count is updated only when the bucket is accessed.
 
-The bucket's stored token count is updated only when the bucket is accessed. While an inactive bucket is not being accessed, its stored value is not proactively updated to reflect elapsed time.
+While an inactive bucket is not being accessed, its stored value is not proactively updated to reflect elapsed time.
 
 When the next request arrives, the elapsed time is calculated and the bucket is brought up to date before the request is evaluated.
 
-This behavior is intentional and avoids unnecessary background work.
-
-This behavior is intentional and does not affect the correctness of the algorithm.
+This behavior is intentional and avoids unnecessary background work without affecting the correctness of the algorithm.
 
 ---
 
 ## Future Evolution
 
-The lazy refill strategy will continue to be used as the project evolves through:
+The lazy refill strategy continues to be used across the project's current backends.
 
-- Redis-backed storage
-- Distributed deployments
-- Docker deployment
-- CI/CD automation
+For the in-memory implementation, refill calculations are performed when a bucket is accessed.
 
-The storage and deployment mechanisms may change, but the refill strategy itself is expected to remain unchanged.
+For the Redis implementation, the same lazy refill principle is performed atomically inside the Redis Lua script.
+
+The refill strategy is expected to remain unchanged as the project evolves through Docker deployment, CI/CD automation, and future infrastructure improvements.
 
 ---
 
@@ -275,9 +274,9 @@ Users are grouped together, and each group shares one bucket.
 
 ## Decision
 
-The project assigns **one independent `TokenBucket` to each user**.
-
-The `RateLimiter` is responsible for creating and managing these buckets.
+The project maintains one independent rate-limit bucket state for each user.
+For `InMemoryBackend`, this state is represented by a `TokenBucket` object.
+For `RedisBackend`, the bucket state is stored in Redis.
 
 ---
 
@@ -289,33 +288,32 @@ Using one bucket per user provides several important benefits:
 - Fair resource allocation.
 - Simple request routing.
 - Easy to understand and maintain.
-- Naturally supports future storage backends such as Redis.
-- Scales well as new users are added.
+- Consistent logical behavior across different storage backends.
+- Natural support for shared storage such as Redis.
 
 Each user's activity affects only their own bucket, ensuring predictable behavior across the system.
+
+The logical relationship remains the same regardless of where the bucket state is stored.
 
 ---
 
 ## Trade-offs
 
-Maintaining a separate bucket for every user with stored state increases memory usage as the number of users grows.
-
-However, each bucket stores only a small amount of state, making this trade-off acceptable for the current implementation.
-
-Future releases may introduce automatic cleanup of inactive buckets to optimize memory usage.
+Maintaining separate bucket state for every user increases the amount of stored state as the number of users grows.
+For the in-memory backend, this increases application memory usage because each active user's `TokenBucket` is stored in the Python process.
+For the Redis backend, bucket state is stored externally and can expire automatically through Redis TTL.
+These trade-offs are acceptable because per-user isolation is an important requirement of the rate limiter.
 
 ---
 
 ## Future Evolution
 
-The one-bucket-per-user model will remain unchanged in future releases.
-
-Only the storage mechanism is expected to evolve:
-
-- v0.7.0 — Redis-backed bucket storage.
-- Future distributed deployments with shared state.
-
-The logical relationship between a user and their bucket will remain the same.
+The one-bucket-per-user model remains part of the project's current design.
+The storage mechanism can evolve independently:
+- `InMemoryBackend` stores each user's `TokenBucket` in memory.
+- `RedisBackend` stores each user's bucket state in Redis.
+- Future backends may provide additional storage or deployment capabilities.
+The logical relationship between a user and their rate-limit state remains unchanged.
 
 ---
 
@@ -323,7 +321,7 @@ The logical relationship between a user and their bucket will remain the same.
 
 ## Problem
 
-The `RateLimiter` must quickly locate the correct `TokenBucket` for every incoming request.
+The in-memory backend must quickly locate the correct `TokenBucket` for every incoming request.
 
 As the number of users increases, searching for a user's bucket should remain efficient without significantly increasing request processing time.
 
@@ -368,7 +366,7 @@ Store bucket information inside a database.
 
 ## Decision
 
-The project stores user buckets inside a Python **dictionary**.
+The `InMemoryBackend` stores user buckets inside a Python **dictionary**.
 
 Each entry maps a unique user identifier to its corresponding `TokenBucket`.
 
@@ -388,39 +386,38 @@ Conceptually:
 
 Python dictionaries provide average **O(1)** lookup and insertion.
 
-This makes them well suited for request routing, where every incoming request must quickly locate the appropriate bucket.
+This makes them well suited for the in-memory backend, where every incoming request must quickly locate the appropriate user's bucket.
 
 Additional benefits include:
 
 - Fast bucket lookup.
 - Fast bucket creation.
 - Simple implementation.
-- Clean integration with the `RateLimiter`.
-- Easy replacement with another storage backend in future versions.
+- Clean integration with `InMemoryBackend`.
+- Easy reasoning about the in-memory storage model.
+
+Because dictionary storage is isolated inside `InMemoryBackend`, other backends can use different storage mechanisms without changing the public `RateLimiter` interface.
 
 ---
 
 ## Trade-offs
 
-Dictionary storage exists only in memory.
-
+Dictionary storage exists only in application memory.
 As a result:
-
 - Bucket data is lost when the application restarts.
-- State cannot be shared between multiple application instances.
-- Memory usage increases with the number of users with stored buckets.
-
-These limitations are acceptable for the current implementation because the primary goal is to build and understand the core rate-limiting logic.
+- State is not shared between separate application instances using the in-memory backend.
+- Memory usage increases as more user buckets are stored.
+- Inactive buckets remain in memory unless explicitly removed.
+These limitations are specific to the in-memory backend.
+The Redis backend addresses the external-storage requirement by storing bucket state in Redis and applying a TTL to user bucket keys.
 
 ---
 
 ## Future Evolution
 
-Beginning with **v0.7.0**, the dictionary implementation is planned to be replaced by Redis-backed storage.
-
-The public API of the `RateLimiter` will remain unchanged, while only the underlying storage mechanism evolves.
-
-This separation between interface and storage makes the architecture easier to extend without affecting users of the package.
+The dictionary remains the storage mechanism for `InMemoryBackend`.
+For applications that require externally shared state, `RedisBackend` provides an alternative storage implementation.
+The backend abstraction allows additional storage mechanisms to be introduced without changing the public `RateLimiter` interface.
 
 ---
 
@@ -475,12 +472,12 @@ Protect the entire application using one shared lock.
 
 ## Decision
 
-The project uses **fine-grained locking**.
+The project uses **fine-grained locking** for the in-memory implementation.
 
 Two independent locking mechanisms are employed:
 
-- One lock inside the `RateLimiter`.
-- One lock inside every `TokenBucket`.
+- One lock inside `InMemoryBackend` to protect the shared user-to-bucket dictionary.
+- One lock inside every `TokenBucket` to protect that bucket's mutable token state.
 
 Each lock protects only the data owned by its respective component.
 
@@ -488,37 +485,35 @@ Each lock protects only the data owned by its respective component.
 
 ## Why This Decision?
 
-Fine-grained locking provides a balance between correctness and performance.
+Fine-grained locking provides a balance between correctness and concurrency.
 
 Benefits include:
 
 - Prevents race conditions.
-- Allows requests for different users to execute concurrently.
+- Protects concurrent bucket creation.
+- Protects individual `TokenBucket` state.
+- Allows requests for different users to process concurrently.
 - Reduces unnecessary blocking.
-- Keeps synchronization localized to individual components.
-- Supports future scalability.
+- Keeps synchronization localized to the component that owns the shared state.
 
-By limiting the scope of each lock, the project maintains thread safety without serializing every request.
+By limiting the scope of each lock, the in-memory implementation maintains thread safety without serializing all token-bucket operations behind a single global lock.
 
 ---
 
 ## Trade-offs
 
 Compared to a single global lock, fine-grained locking introduces additional implementation complexity.
-
 Multiple locks require careful ownership and consistent synchronization to avoid programming mistakes.
-
 However, the improved concurrency and modularity outweigh the added complexity for this project.
 
 ---
 
 ## Future Evolution
 
-The current locking strategy protects shared state within a single Python process.
-
-Future releases that introduce Redis-backed storage or distributed deployments will move synchronization beyond in-memory locks.
-
-Even then, the principle of protecting only the necessary shared resources will remain unchanged.
+The current locking strategy protects shared in-memory state within a single Python process.
+The Redis backend uses a different concurrency model: refill, request decision, state update, and TTL refresh are performed atomically inside a Redis Lua script.
+This allows synchronization of Redis-backed state to occur at the Redis execution layer rather than through Python in-memory locks.
+Future distributed deployments may build further on this external-state approach.
 
 ---
 
@@ -576,12 +571,15 @@ Separate the implementation into multiple modules inside a package.
 
 ## Decision
 
-Beginning with **v0.5.0**, the project was reorganized into a reusable Python package named `ratelimiter`.
+Beginning with **v0.5.0**, the project was reorganized into a reusable Python package named `RateLimiter`.
 
 The implementation was split into focused modules:
 
 - `rate_limiter.py`
 - `token_bucket.py`
+- `backends/base.py`
+- `backends/in_memory.py`
+- `backends/redis_backend.py`
 - `__init__.py`
 
 Automated tests and documentation were also moved into their own dedicated directories.
@@ -599,16 +597,15 @@ Packaging the project provides several long-term benefits:
 - Standard Python project layout.
 - Better preparation for future publishing and distribution.
 
-This structure made the FastAPI integration in v0.6.0 easier to implement and provides a foundation for future integrations such as Redis.
+This structure made the FastAPI integration in v0.6.0 easier to maintain and allowed the backend abstraction and Redis implementation to be introduced in v0.7.0 without redesigning the public `RateLimiter` interface.
+The package structure now separates the public rate-limiting interface, algorithm implementation, and backend-specific storage behavior.
 
 ---
 
 ## Trade-offs
 
 Compared to a single-file implementation, a packaged project introduces additional files and configuration.
-
 Developers must understand Python packages, imports, and project structure.
-
 However, these trade-offs are worthwhile because they significantly improve maintainability and scalability.
 
 ---
@@ -616,15 +613,12 @@ However, these trade-offs are worthwhile because they significantly improve main
 ## Future Evolution
 
 Future releases will continue building on this package structure.
-
-New modules may be added for:
-
-- Redis storage
-- Docker support
-- Utility functions
-- Configuration management
-
-The package layout introduced in **v0.5.0** is expected to remain the foundation of the project through **v1.0.0**.
+Additional modules may be introduced for:
+- Additional storage backends.
+- Configuration management.
+- Infrastructure integrations.
+- Other supporting functionality.
+The package layout introduced in **v0.5.0** and extended with the backend architecture in **v0.7.0** is expected to remain the foundation of the project through **v1.0.0**.
 
 ---
 
@@ -700,15 +694,14 @@ Key benefits include:
 - Seamless integration with future CI/CD pipelines.
 
 The focus of the original testing milestone was understanding testing principles rather than exploring advanced testing frameworks.
+As the project evolved, the same `unittest` foundation was extended to cover FastAPI behavior and Redis backend integration.
 
 ---
 
 ## Trade-offs
 
 Compared to frameworks such as `pytest`, `unittest` requires more boilerplate code and offers fewer convenience features.
-
 However, its simplicity and standard-library availability make it an excellent choice for establishing a strong testing foundation.
-
 Future migration to another framework remains possible without changing the production code.
 
 ---
@@ -716,15 +709,17 @@ Future migration to another framework remains possible without changing the prod
 ## Future Evolution
 
 Future releases may expand the testing strategy with:
-
-- Performance testing
-- Integration testing
-- API testing
-- Load testing
-- Redis backend testing
-- CI/CD automation using GitHub Actions
-
-Regardless of the framework used, automated testing will remain a fundamental part of the project's development workflow.
+- Performance testing.
+- Load testing.
+- Additional integration testing.
+- Failure and recovery testing.
+- CI/CD automation using GitHub Actions.
+The current test suite already includes:
+- `TokenBucket` unit tests.
+- `RateLimiter` tests.
+- FastAPI tests.
+- Redis backend integration tests.
+Automated testing will remain a fundamental part of the project's development workflow.
 
 ---
 
@@ -793,71 +788,201 @@ This keeps the core algorithm independent from the web framework.
 ## Why This Decision?
 
 The primary reason for this approach is separation of concerns.
-
 The responsibilities remain clearly divided:
-
-- `TokenBucket` manages token calculation and request allowance.
-- `RateLimiter` manages users and their buckets.
-- FastAPI handles HTTP requests and responses.
-
-This allows the v0.6.0 integration to add HTTP functionality without redesigning the underlying rate-limiting component.
-
-It also creates a cleaner foundation for future infrastructure changes such as Redis-backed storage and distributed deployment.
+- `TokenBucket` manages in-memory token state, refill calculation, and request allowance.
+- `InMemoryBackend` manages in-memory user-to-bucket state.
+- `RedisBackend` manages Redis-backed bucket processing.
+- `RateLimiter` provides the public interface and delegates requests to the configured backend.
+- FastAPI handles HTTP requests, validation, and responses.
+This allows infrastructure and storage implementations to evolve without moving rate-limiting logic into the web framework.
 
 ---
 
 ## Trade-offs
 
 Introducing FastAPI adds an external dependency and increases the overall project surface area.
-
 The application also requires HTTP-specific request and response handling that was not necessary when the rate limiter was used directly as a Python library.
-
 However, these costs are acceptable because the integration demonstrates how the reusable package can be incorporated into a real backend service without coupling the core algorithm to the framework.
 
 ---
 
 ## Future Evolution
 
-The FastAPI integration is intended to remain an integration layer rather than becoming part of the core rate-limiting algorithm.
+The FastAPI integration is intended to remain an integration layer rather than becoming part of the core rate-limiting implementation.
+Future releases can extend or replace the underlying backend and infrastructure without requiring the API layer to contain storage-specific rate-limiting behavior.
+The v0.7.0 Redis backend demonstrates this separation by adding Redis-backed state without requiring Redis-specific logic inside the FastAPI layer.
 
-Future releases can replace or extend the underlying storage mechanism without requiring the API layer to contain rate-limiting implementation details.
+---
+# Decision 9 — Backend Abstraction and Redis Backend
 
-In **v0.7.0**, Redis-backed storage is planned as the next major infrastructure evolution while preserving the existing separation between the API layer, rate limiter, and storage mechanism.
+## Problem
+
+As the project evolved beyond a single-process in-memory implementation, storing rate-limit state directly inside the core `RateLimiter` became increasingly restrictive.
+An in-memory dictionary is simple and fast, but its state is limited to a single application process.
+The project needed a design that could support alternative storage mechanisms without changing the public `RateLimiter` interface.
+
+---
+
+## Alternatives Considered
+
+### Keep Storage Inside `RateLimiter`
+
+Continue allowing `RateLimiter` to directly manage the in-memory bucket dictionary.
+**Advantages**
+- Simple architecture.
+- Minimal number of components.
+- Easy to understand for small applications.
+
+**Disadvantages**
+- Couples the public interface to one storage implementation.
+- Makes additional storage backends harder to introduce.
+- Makes distributed storage difficult to integrate cleanly.
+- Increases the responsibility of `RateLimiter`.
+
+---
+
+### Backend Abstraction
+
+Introduce a common backend interface and move storage-specific behavior into backend implementations.
+**Advantages**
+- Separates the public interface from storage.
+- Allows multiple backend implementations.
+- Keeps `RateLimiter` simple.
+- Makes testing and extension easier.
+- Supports both in-memory and external storage.
+
+**Disadvantages**
+- Adds an abstraction layer.
+- Requires additional classes and modules.
+- Slightly increases architectural complexity.
+
+---
+
+## Decision
+
+Beginning with **v0.7.0**, the project uses a **backend abstraction**.
+The `RateLimiterBackend` abstract interface defines the backend contract.
+Two implementations currently exist:
+- `InMemoryBackend`
+- `RedisBackend`
+The `RateLimiter` delegates `allow_request()` calls to the configured backend.
+
+---
+
+## Why This Decision?
+
+The backend abstraction separates the public rate-limiting interface from backend-specific state management.
+This allows:
+- The same `RateLimiter` interface to work with different storage mechanisms.
+- The in-memory implementation to remain simple.
+- Redis to be introduced without changing the public API.
+- Backend-specific concurrency mechanisms to remain isolated.
+- Future storage backends to be added independently.
+The abstraction also keeps the FastAPI integration independent from storage-specific implementation details.
+
+---
+
+## Why Redis?
+
+Redis was selected as the first external backend because it provides fast in-memory data access and atomic server-side operations.
+It also provides a natural foundation for sharing rate-limit state between application instances.
+The Redis backend stores each user's bucket state using a Redis hash containing:
+- `current_tokens`
+- `last_refill_time`
+User bucket keys use the prefix:
+```text
+ratelimiter:user:
+```
+
+## Why Lua
+
+The Redis backend performs the complete rate-limit operation inside a Lua script.
+The script performs:
+- Reading the current bucket state.
+- Obtaining the current time using Redis TIME.
+- Calculating elapsed time.
+- Refilling tokens.
+- Limiting tokens to bucket capacity.
+- Determining whether the request is allowed.
+- Consuming a token when allowed.
+- Writing the updated state.
+- Refreshing the bucket TTL.
+Keeping these operations inside one Redis script provides atomic execution at the Redis server.
+This prevents concurrent requests from observing partially updated bucket state.
+
+## Why Redis Time
+
+The Redis backend obtains the current time using Redis TIME rather than relying on the application server's local clock.
+This keeps the refill calculation based on the clock associated with the Redis state being modified.
+It also avoids making the backend dependent on the local application process's wall-clock time for Redis-backed bucket calculations.
+
+## Why Inject the Redis Client
+
+The Redis client is provided to RedisBackend through its constructor rather than being created internally.
+This decision keeps connection creation and configuration outside the backend.
+It provides:
+- Easier testing.
+- Greater flexibility in Redis client configuration.
+- Clear separation between connection management and rate-limiting behavior.
+- Better control for applications embedding the backend.
+The current implementation does not perform Redis health checks, automatic reconnection, or failure recovery.
+
+## TTL-Based Bucket Cleanup
+
+Redis-backed user buckets use a TTL to prevent inactive bucket state from remaining indefinitely.
+The current implementation refreshes the bucket TTL after each request.
+This provides automatic cleanup for inactive users without requiring a separate cleanup process.
+
+## Trade-offs
+
+The backend abstraction introduces additional architectural complexity compared with directly storing buckets inside `RateLimiter`.
+Redis also introduces an external infrastructure dependency and operational considerations that do not exist in the in-memory implementation.
+The Redis backend additionally requires Redis-compatible server infrastructure and does not currently provide built-in connection management, health checks, or failure recovery.
+These trade-offs are accepted because the abstraction provides a cleaner path toward shared external state and future distributed deployments.
+
+## Future Evolution
+
+Future releases may introduce additional backend implementations or infrastructure capabilities.
+Potential areas include:
+- Additional storage backends.
+- Redis configuration management.
+- Health checks.
+- Connection and failure handling.
+- Docker-based deployment.
+- Distributed deployment testing.
+- CI/CD automation.
+The public `RateLimiter` interface is intended to remain stable while backend implementations evolve independently.
 
 ---
 
 # Summary
 
 Every engineering decision made throughout this project was guided by a common objective:
-
 > **Build a maintainable, extensible, and educational rate limiter while understanding the reasoning behind every implementation choice.**
-
 Rather than selecting technologies based solely on popularity, each decision was made by considering:
-
 - Simplicity
 - Maintainability
 - Performance
 - Scalability
 - Learning objectives
 - Future extensibility
-
 The project intentionally evolves through incremental milestones.
-
 Each release introduces one major engineering concept while preserving the existing architecture and public API whenever possible.
-
 The key design decisions documented in this file include:
-
 - Choosing the Token Bucket algorithm.
 - Using lazy token refill.
 - Maintaining one bucket per user.
-- Using dictionary-based storage.
-- Applying fine-grained locking.
+- Using dictionary-based storage for the in-memory backend.
+- Applying fine-grained locking to in-memory shared state.
 - Organizing the project as a reusable Python package.
 - Introducing automated testing with Python's built-in `unittest` framework.
 - Using FastAPI as an integration layer for HTTP access.
-
-With FastAPI now integrated in **v0.6.0**, future releases will document the design reasoning behind Redis, Docker, CI/CD, and other significant engineering changes.
-
-The goal is not only to build a working rate limiter but also to document the engineering thought process that transformed a simple algorithm into a production-oriented software project.
+- Introducing a backend abstraction.
+- Implementing Redis as an alternative backend.
+- Using Redis Lua scripting for atomic rate-limit processing.
+- Using Redis `TIME` for Redis-backed refill calculations.
+- Using TTL-based cleanup for inactive Redis buckets.
+With **v0.7.0**, the project has evolved from a single-process in-memory implementation into a backend-independent rate-limiting system with both in-memory and Redis-backed implementations.
+The goal is not only to build a working rate limiter but also to document the engineering reasoning behind the decisions that transformed a simple algorithm into a production-focused software project.
 
 ---

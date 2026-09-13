@@ -1,6 +1,7 @@
 # Python
 __pycache__/
 *.pyc
+python_rate_limiter.egg-info/
 
 # Virtual Environment
 venv/

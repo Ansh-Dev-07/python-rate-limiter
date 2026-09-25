@@ -2,15 +2,16 @@ import unittest
 from ratelimiter.backends.redis_backend import RedisBackend
 import redis
 import time
+import os
 from threading import Thread
 from ratelimiter.rate_limiter import RateLimiter
 
 class TestRedisBackend(unittest.TestCase):
     def setUp(self):
-        self.client=redis.Redis(
-            host="localhost",
-            port=6379,
-            decode_responses=True
+        self.client = redis.Redis(
+        host=os.getenv("REDIS_HOST", "localhost"),
+        port=int(os.getenv("REDIS_PORT", "6379")),
+        decode_responses=True
         )
         self.client.delete("ratelimiter:user:Ansh")
         self.client.delete("ratelimiter:user:Rishi")

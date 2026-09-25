@@ -3,7 +3,7 @@
 ## Overview
 
 Version `v0.7.0` introduces Redis as an alternative storage backend for the rate limiter.
-
+Current Documentation Version: `v0.8.0`
 The earlier versions of the project stored user buckets inside a Python dictionary:
 
 ```text
@@ -598,18 +598,16 @@ The Redis backend currently provides:
 * Automated Redis integration tests
 
 The current implementation does **not** yet provide:
-
 * Redis connection health checks
 * Automatic Redis reconnection
 * Redis failure recovery
 * Authentication configuration
 * TLS configuration
 * Redis persistence configuration
-* A Redis-backed FastAPI configuration
 * Automatic switching between Redis and in-memory backends
 * A demonstrated multi-server deployment
-
-Therefore, v0.7.0 should be understood as the introduction of a **Redis-backed storage architecture**, rather than a complete production distributed deployment.
+The `v0.7.0` Redis backend remains a storage architecture, while `v0.8.0` adds Docker-based deployment of the FastAPI application and Redis service.
+The current Docker deployment does not provide persistent Redis storage, health checks, automatic recovery, or a demonstrated multi-server production deployment.
 
 ---
 
@@ -723,22 +721,37 @@ Externally shared state
 
 This creates the foundation for further infrastructure and deployment improvements in later versions.
 
+The `v0.8.0` deployment layer builds on this Redis architecture:
+
+```text
+v0.8
+
+FastAPI Container
+        ↓
+   RateLimiter
+        ↓
+   RedisBackend
+        ↓
+ Redis Container
+ ```
+
+Docker Compose provides the deployment environment and service networking, while the Redis backend continues to handle the rate-limit state and atomic request processing.
+
 ---
 
 # 13. Future Evolution
 
-The Redis backend provides the foundation for future improvements, but those improvements are outside the current v0.7.0 implementation.
-
+The Redis backend provides the foundation for further infrastructure improvements.
 Potential future work includes:
-
 * Redis connection management
+* Health checks
 * Failure handling and recovery
 * Configuration management
-* Redis-backed FastAPI deployment
-* Docker-based Redis development environment
+* Redis persistence configuration
 * Multi-instance application deployment
 * CI/CD integration with Redis
 * Production deployment
 * Additional backend implementations
+The Docker-based deployment introduced in v0.8.0 provides the current containerized environment for the FastAPI application and Redis backend, while the areas above remain outside the current implementation.
 
-These features should be implemented and tested before being considered part of the project's supported functionality.
+---

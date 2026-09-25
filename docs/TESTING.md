@@ -6,7 +6,7 @@ Testing is an essential part of software engineering. As the project evolves thr
 
 Unlike the README, which introduces the project, or the architecture and design documents, this guide focuses entirely on verifying correctness and maintaining software quality.
 
-Current Testing Version: **v0.7.0**
+Current Testing Version: **v0.8.0**
 
 ---
 
@@ -16,7 +16,7 @@ The testing strategy for this project is based on one simple principle:
 
 > **Every feature should be verifiable through automated tests.**
 
-Instead of relying on manual execution and visual inspection, Instead of relying on manual execution and visual inspection, the project uses repeatable automated tests to validate the behavior of its core components and integration layers.
+Instead of relying on manual execution and visual inspection, the project uses repeatable automated tests to validate the behavior of its core components and integration layers.
 
 This approach provides several benefits:
 
@@ -77,7 +77,7 @@ This separation follows the same design philosophy as the production code: each 
 
 ## Current Testing Scope
 
-At **v0.7.0**, the automated test suite validates:
+At **v0.8.0**, the automated test suite validates:
 - Constructor input validation.
 - Token consumption.
 - Request acceptance.
@@ -312,11 +312,9 @@ This approach makes the tests more resilient to internal refactoring while ensur
 The current automated test suite covers the core rate-limiting implementation, FastAPI integration, and Redis backend integration.
 
 It does not yet include:
-
 - Performance benchmarks.
 - Load testing.
 - Stress testing.
-- Docker environment testing.
 - Distributed deployment testing.
 - Redis failure and recovery testing.
 
@@ -467,14 +465,18 @@ The Redis tests ensure that the Redis-backed implementation preserves the expect
 
 ## v0.8.0 — Docker
 
-Containerization introduces another deployment environment.
-
-Testing goals include:
-
-- Container startup verification.
-- Dependency validation.
-- Environment configuration testing.
-- Consistent behavior across different systems.
+Docker deployment was introduced in v0.8.0 to provide a containerized environment for the FastAPI application and Redis backend.
+Docker verification covered:
+- Docker image build verification.
+- FastAPI container startup.
+- Redis service startup through Docker Compose.
+- Redis host and port environment configuration.
+- FastAPI connectivity to the Redis backend.
+- Redis-backed `/allow` request behavior.
+- Rate-limit enforcement through the containerized application.
+- Docker Compose service lifecycle using `up` and `down`.
+The containerized deployment was verified by sending requests through the FastAPI container and confirming that the Redis-backed rate limiter enforced the configured limit, including successful requests followed by HTTP `429` after the available tokens were exhausted.
+Docker environment verification is treated as deployment testing rather than as part of the 23-test Python `unittest` suite.
 
 ---
 
@@ -540,13 +542,13 @@ Throughout this document, we explored:
 - Guidelines for writing new tests.
 - The long-term testing roadmap.
 The project currently focuses on **behavior-focused testing**, validating the public behavior of the package while using targeted integration tests where external components such as FastAPI and Redis are involved.
-At **v0.7.0**, the test suite contains **23 automated tests**, including:
+At **v0.8.0**, the test suite contains **23 automated tests**, including:
 - `TokenBucket` tests.
 - `RateLimiter` tests.
 - FastAPI integration tests.
 - Redis backend integration tests.
 The Redis backend tests additionally verify concurrency, token refill, independent users, and TTL-based bucket expiration.
-As the project evolves, the testing strategy will expand alongside new architectural milestones, including Docker deployment, Continuous Integration with GitHub Actions, performance testing, load testing, and additional failure and recovery scenarios.
+As the project evolves, the testing strategy will expand alongside future architectural milestones, including Continuous Integration with GitHub Actions, performance testing, load testing, and additional failure and recovery scenarios.
 The objective is not simply to increase the number of tests, but to ensure that every major feature is accompanied by reliable, repeatable, and automated verification.
 A well-tested project is easier to maintain, easier to extend, and inspires greater confidence in both developers and users.
 Ultimately, testing is not treated as a separate phase of development—it is considered an essential part of building reliable software from the beginning.

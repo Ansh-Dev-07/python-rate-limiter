@@ -10,7 +10,7 @@ Every software project involves trade-offs. There are usually multiple valid sol
 
 The decisions documented here were made after considering simplicity, maintainability, scalability, learning objectives, and future extensibility.
 
-Current Version: **v0.7.0**
+Current Version: **v0.8.0**
 
 ---
 
@@ -948,10 +948,130 @@ Potential areas include:
 - Redis configuration management.
 - Health checks.
 - Connection and failure handling.
-- Docker-based deployment.
 - Distributed deployment testing.
 - CI/CD automation.
-The public `RateLimiter` interface is intended to remain stable while backend implementations evolve independently.
+The Docker deployment introduced in **v0.8.0** provides the current containerized deployment foundation for the FastAPI application and Redis backend.
+
+---
+
+# Decision 10 — Docker-Based Deployment
+
+## Problem
+
+As the project evolved to include both a FastAPI application and an external Redis backend, running the complete system required multiple services and environment-specific configuration.
+The project needed a deployment approach that could package the application consistently and provide a simple way to run the FastAPI service together with Redis.
+
+---
+
+## Alternatives Considered
+
+### Manual Local Setup
+
+Run the FastAPI application and Redis server directly on the development machine.
+
+**Advantages**
+
+- Simple during development.
+- Easy to inspect individual components.
+- Minimal infrastructure overhead.
+
+**Disadvantages**
+
+- Requires Redis to be installed and configured separately.
+- Environment differences can affect behavior.
+- Multiple services must be started and configured manually.
+- Reproducing the same environment on another machine is more difficult.
+
+---
+
+### Docker-Based Deployment
+
+Package the FastAPI application into a Docker image and run the application together with Redis using Docker Compose.
+
+**Advantages**
+
+- Consistent application environment.
+- Redis can run as a separate service without requiring a local Redis installation.
+- Simple multi-service deployment using Docker Compose.
+- Clear separation between the application container and Redis container.
+- Easier reproduction of the deployment environment.
+
+**Disadvantages**
+
+- Introduces Docker as an additional development and deployment dependency.
+- Adds container configuration and networking concepts.
+- The current setup does not provide persistent Redis storage.
+- The current Compose configuration does not include service health checks.
+
+---
+
+## Decision
+
+Beginning with **v0.8.0**, the project uses **Docker-based deployment** for the containerized FastAPI and Redis environment.
+The deployment consists of:
+- A Docker container running the FastAPI application.
+- A separate Redis container providing the Redis backend.
+- Docker Compose for coordinating the application and Redis services.
+The FastAPI application receives the Redis connection configuration through environment variables and uses `RedisBackend` for rate-limit state.
+Docker is treated as a **deployment layer** rather than part of the core rate-limiting implementation.
+
+---
+
+## Why This Decision?
+
+Docker provides a practical way to package and run the project's multi-service environment consistently.
+The v0.8.0 deployment provides:
+- A reproducible Python application environment.
+- Containerized FastAPI execution.
+- A dedicated Redis service.
+- Automatic service networking through Docker Compose.
+- Environment-based Redis host and port configuration.
+- A straightforward way to start and stop the complete application stack.
+Most importantly, the core `RateLimiter`, backend abstraction, and rate-limiting algorithm remain independent of Docker.
+The same package can therefore still be used directly from Python without requiring the Docker deployment layer.
+
+---
+
+## Deployment Structure
+
+The v0.8.0 deployment follows this structure:
+
+```text
+Client
+  |
+  v
+FastAPI Container
+  |
+  v
+RateLimiter
+  |
+  v
+RedisBackend
+  |
+  v
+Redis Container
+```
+Docker Compose manages the application and Redis services and provides the network through which the FastAPI container communicates with Redis.
+
+## Trade-offs
+
+Docker introduces additional configuration and tooling compared with running the Python application directly.
+The deployment also depends on Docker and Docker Compose being available on the host machine.
+The current configuration does not define a persistent Redis volume, so Redis state is not configured for persistence across removal and recreation of the Redis container.
+The current Compose configuration also does not define Redis health checks or automated recovery behavior.
+These limitations are intentional for the current milestone and can be addressed in future infrastructure-focused releases.
+
+## Future Evolution
+
+Future releases may extend the deployment architecture with:
+- Redis health checks.
+- Persistent Redis storage.
+- Improved service startup and recovery handling.
+- Production-oriented container configuration.
+- Container image publishing.
+- CI/CD automation.
+- Distributed deployment testing.
+Docker therefore establishes the deployment foundation for future infrastructure improvements without changing the core rate-limiting design.
 
 ---
 
@@ -982,7 +1102,8 @@ The key design decisions documented in this file include:
 - Using Redis Lua scripting for atomic rate-limit processing.
 - Using Redis `TIME` for Redis-backed refill calculations.
 - Using TTL-based cleanup for inactive Redis buckets.
-With **v0.7.0**, the project has evolved from a single-process in-memory implementation into a backend-independent rate-limiting system with both in-memory and Redis-backed implementations.
+- Using Docker and Docker Compose for containerized deployment.
+With **v0.8.0**, the project has evolved from a single-process in-memory implementation into a backend-independent rate-limiting system with both in-memory and Redis-backed implementations, together with a containerized FastAPI and Redis deployment environment.
 The goal is not only to build a working rate limiter but also to document the engineering reasoning behind the decisions that transformed a simple algorithm into a production-focused software project.
 
 ---

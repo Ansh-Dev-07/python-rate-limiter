@@ -6,13 +6,13 @@ Unlike the README, which provides a high-level overview, this document focuses o
 
 The architecture evolves with each project release and is intentionally designed to demonstrate software engineering principles such as modularity, separation of concerns, maintainability, and scalability.
 
-Current Architecture Version: **v0.7.0**
+Current Architecture Version: **v0.8.0**
 
 ---
 
 # High-Level Architecture
 
-At **v0.7.0**, the project consists of a reusable Python package, a FastAPI-based HTTP integration layer, and a pluggable backend architecture supporting both in-memory and Redis-backed rate limiting.
+At **v0.8.0**, the project consists of a reusable Python package, a FastAPI-based HTTP integration layer, a pluggable backend architecture supporting both in-memory and Redis-backed rate limiting, and a Docker-based deployment environment.
 
 The `RateLimiter` acts as the main public interface and delegates rate-limiting operations to a backend implementing the `RateLimiterBackend` interface.
 
@@ -66,6 +66,8 @@ The FastAPI layer remains separate from the core rate-limiting package. The rate
 
 The v0.7.0 backend abstraction allows storage implementations to evolve independently from the public RateLimiter interface.
 
+In **v0.8.0**, Docker is introduced as a deployment layer around the existing application architecture. The containerized deployment runs the FastAPI application and Redis as separate services connected through Docker Compose networking.
+
 ---
 
 # Package Structure 
@@ -105,8 +107,12 @@ python-rate-limiter/
 │   ├── TOKEN_BUCKET.md
 │   ├── DESIGN_DECISIONS.md
 │   ├── TESTING.md
-│   └── REDIS_BACKEND.md
+│   ├── REDIS_BACKEND.md
+│   └── DOCKER.md
 │
+├── Dockerfile
+├── docker-compose.yml
+├── .dockerignore
 ├── README.md
 ├── CHANGELOG.md
 ├── PROJECT_TIMELINE.md
@@ -193,6 +199,9 @@ The root directory contains project-level configuration and documentation.
 | `pyproject.toml` | Python package configuration and project metadata. |
 | `LICENSE` | MIT License. |
 | `.gitignore` | Prevents unnecessary files from being committed to Git. |
+| `Dockerfile` | Defines the container image for the FastAPI application. |
+| `docker-compose.yml` | Defines the FastAPI and Redis services and their Docker networking. |
+| `.dockerignore` | Excludes unnecessary and local development files from the Docker build context. |
 
 ---
 
@@ -495,8 +504,7 @@ This separation reduces coupling and allows additional storage backends to be in
 
 # Request Lifecycle
 
-At **v0.7.0**, requests can reach the rate-limiting core through two entry points:
-
+At **v0.8.0**, requests can reach the rate-limiting core through two entry points:
 1. Direct Python library usage.
 2. The FastAPI HTTP integration.
 
@@ -897,7 +905,7 @@ The fine-grained locking strategy protects the in-memory state while allowing re
 
 The FastAPI integration introduced in **v0.6.0** uses the same thread-safe `RateLimiter` implementation. The API layer does not introduce a separate concurrency mechanism for rate limiting.
 
-As the project evolves, this architecture will make it easier to replace the in-memory storage with external systems such as Redis without significantly changing the public API.
+The backend abstraction introduced in **v0.7.0** allows external storage such as Redis to be integrated without significantly changing the public API.
 
 ---
 
@@ -970,7 +978,7 @@ This architecture allows the core package to continue functioning independently 
 
 ---
 
-## v0.7.0 — Redis Backend & Backend Abstraction
+## ✅ v0.7.0 — Redis Backend & Backend Abstraction
 
 Version **v0.7.0** introduces a pluggable backend architecture.
 
@@ -996,16 +1004,45 @@ Detailed Redis architecture is documented separately in: `docs/REDIS_BACKEND.md`
 
 ---
 
-## v0.8.0 — Docker
+## ✅ v0.8.0 — Docker
 
-The application is planned to be containerized using Docker.
+Version **v0.8.0** introduces Docker-based deployment for the application.
 
-Containerization provides:
+The FastAPI application is containerized using a Dockerfile, while Redis runs as a separate service managed through Docker Compose.
 
-- Consistent development environments
-- Simplified deployment
-- Easy dependency management
-- Improved portability
+The Docker deployment provides:
+
+- A containerized FastAPI application.
+- A containerized Redis service.
+- Docker Compose orchestration.
+- Container networking between FastAPI and Redis.
+- Environment-based Redis connection configuration.
+- Redis-backed rate limiting through the existing `RedisBackend`.
+- A repeatable local containerized deployment.
+
+Docker operates as a deployment layer around the existing application architecture. It does not replace or modify the Token Bucket algorithm, `RateLimiter` interface, backend abstraction, or Redis Lua processing.
+
+The resulting deployment architecture can be represented as:
+
+```text
+Client
+   │
+   │ HTTP :8000
+   ▼
+FastAPI Container
+   │
+   ▼
+RateLimiter
+   │
+   ▼
+RedisBackend
+   │
+   │ Docker Compose Network
+   ▼
+Redis Container
+```
+
+The core rate-limiting architecture remains independent from Docker-specific implementation details.
 
 ---
 
@@ -1204,4 +1241,4 @@ RateLimiterBackend
 The architecture now separates the public rate-limiting interface from backend-specific state management.
 This allows the in-memory and Redis implementations to evolve independently while preserving the same `RateLimiter` interface.
 Future releases will extend the infrastructure around this architecture rather than replacing the existing backend boundary.
-Planned additions such as Docker and CI/CD will operate around the existing application and package structure.
+Docker is now implemented as a deployment layer around the existing application and package structure. Future infrastructure additions such as CI/CD will build upon this architecture without changing the existing backend boundary.

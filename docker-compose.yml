@@ -1,0 +1,16 @@
+services:
+
+  api:
+    build: .
+    container_name: rate-limiter
+    ports:
+      - "8000:8000"
+    environment:
+      REDIS_HOST: rate-limiter-redis
+      REDIS_PORT: 6379
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7
+    container_name: rate-limiter-redis

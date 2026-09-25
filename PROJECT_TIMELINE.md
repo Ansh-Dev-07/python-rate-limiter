@@ -8,8 +8,8 @@ The goal of this project is to build a production-ready rate limiter incremental
 
 # Project Roadmap
 
-| Version | Milestone                        | Status    |
-|----------|---------------------------------|-----------|
+| Version    | Milestone                     | Status    |
+|------------|-------------------------------|-----------|
 | ✅ v0.1.0 | Core Token Bucket Algorithm   | Completed |
 | ✅ v0.2.0 | Multi-User Rate Limiter       | Completed |
 | ✅ v0.3.0 | Thread-Safe Rate Limiter      | Completed |
@@ -17,7 +17,7 @@ The goal of this project is to build a production-ready rate limiter incremental
 | ✅ v0.5.0 | Packaging & Project Structure | Completed |
 | ✅ v0.6.0 | FastAPI Integration           | Completed |
 | ✅ v0.7.0 | Redis Backend                 | Completed |
-| 🔄 v0.8.0 | Docker                        | Planned   |
+| ✅ v0.8.0 | Docker                        | Completed |
 | 🔄 v0.9.0 | CI/CD                         | Planned   |
 | 🎯 v1.0.0 | Production-Ready Release      | Goal      |
 
@@ -202,17 +202,47 @@ This establishes a foundation for sharing rate-limit state across multiple appli
 
 ---
 
-## 🔄 v0.8.0 — Docker
+## ✅ v0.8.0 — Docker
 
 ### Objectives
+
 - Containerize the application.
 - Create Docker images.
 - Simplify application deployment across environments.
+- Run the FastAPI application together with Redis through Docker Compose.
 
 ### Key Learning Objectives
+
 - Docker
 - Containerization
+- Docker Compose
+- Container networking
 - Deployment fundamentals
+
+### Features Implemented
+
+- Added `Dockerfile` for the FastAPI application.
+- Added `.dockerignore` for the Docker build context.
+- Added `docker-compose.yml` for the FastAPI and Redis services.
+- Added Redis 7 as a containerized service.
+- Added Docker Compose networking between the application and Redis.
+- Added environment-based Redis configuration through `REDIS_HOST` and `REDIS_PORT`.
+- Updated the FastAPI application to use the Redis-backed `RateLimiter` in the containerized deployment.
+
+### Outcome
+
+The project can now be deployed as a Docker Compose environment containing the FastAPI application and Redis.
+The existing Redis backend remains responsible for rate-limit state and atomic request processing, while Docker provides the deployment environment and service networking.
+The containerized deployment was verified through Docker image building, service startup, FastAPI-to-Redis connectivity, rate-limit enforcement, and Docker Compose lifecycle operations.
+
+### Concepts Learned
+
+- Docker
+- Containerization
+- Docker Compose
+- Container networking
+- Environment-based configuration
+- Containerized deployment
 
 ---
 

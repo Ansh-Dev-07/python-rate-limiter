@@ -424,10 +424,10 @@ The project currently supports:
 - Thread-safe in-memory processing.
 - Lazy token refill.
 Future releases may extend the surrounding system with:
-- Docker deployment.
 - CI/CD automation.
 - Performance benchmarking.
 - Additional operational and deployment capabilities.
+Docker deployment was introduced in v0.8.0 and provides a containerized environment around the existing rate-limiting implementation.
 These improvements are expected to build upon the existing Token Bucket algorithm rather than replace it.
 
 ---

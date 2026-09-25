@@ -1,23 +1,17 @@
 # Python Rate Limiter
 
-A production-focused **Token Bucket Rate Limiter** implemented in Python, built incrementally from a simple in-memory algorithm into a reusable, well-tested package with a FastAPI HTTP interface.
-
+A production-focused **Token Bucket Rate Limiter** implemented in Python, built incrementally from a simple in-memory algorithm into a reusable, well-tested package with a FastAPI HTTP interface, Redis backend, and Docker-based deployment.
 This project documents the engineering journey of designing, testing, packaging, and exposing a backend component through modern software engineering practices.
-
-Current Version: **v0.7.0**
+Current Version: **v0.8.0**
 
 ---
 
 ## Why this project?
 
 Most tutorials focus on writing code that works.
-
 This project focuses on **building software the way it evolves in the real world**.
-
 Each release introduces a single engineering milestone instead of implementing everything at once.
-
 The repository demonstrates the progression from:
-
 * A basic Token Bucket algorithm
 * Multi-user request handling
 * Thread-safe concurrency
@@ -26,9 +20,8 @@ The repository demonstrates the progression from:
 * FastAPI integration
 * Redis-backed storage
 * Backend abstraction
-* (Upcoming) Docker support
+* Docker-based deployment
 * (Upcoming) CI/CD automation
-
 Every version remains available through GitHub Releases, allowing the evolution of the project to be explored step by step.
 
 ---
@@ -86,8 +79,7 @@ For editable development installation:
 ```bash
 pip install -e .
 ```
-> **Redis note:** v0.7.0 includes the Redis Python client as a project dependency. A running Redis server is required when using `RedisBackend` or running the Redis integration tests.
-
+> **Redis note:** The project includes the Redis Python client as a project dependency. A running Redis server is required when using `RedisBackend` directly or running the Redis integration tests. The Docker Compose deployment starts Redis automatically.
 > **Note:** Beginning with **v0.5.0**, the project is organized as a reusable Python package following standard Python packaging conventions.
 
 ---
@@ -116,7 +108,6 @@ Each user receives an independent token bucket, while the underlying token bucke
 ## Redis Backend
 
 Beginning with **v0.7.0**, the project supports Redis as an alternative storage backend.
-
 The rate limiter now uses a backend abstraction:
 
 ```text
@@ -133,7 +124,6 @@ InMemoryBackend  RedisBackend
                   Redis
 ```
 The in-memory backend stores user buckets inside the Python process, while the Redis backend stores bucket state externally in Redis.
-
 Each Redis-backed user bucket is stored using a Redis hash containing:
 
 ratelimiter:user:<user>
@@ -141,12 +131,9 @@ ratelimiter:user:<user>
 └── last_refill_time
 
 The Redis backend performs the token refill, request decision, state update, and TTL refresh inside a Lua script.
-
 Redis server-side time is used for refill calculations, and inactive buckets are automatically removed through Redis key expiration.
-
-For a detailed explanation of the Redis architecture, data model, Lua script, server-side time, TTL behavior, and testing, see:
-
-docs/REDIS_BACKEND.md
+For a detailed explanation of the Redis architecture, data model, Lua script, server-side time, TTL behavior, and testing, see: `docs/REDIS_BACKEND.md`
+In **v0.8.0**, the FastAPI deployment can be configured to use this Redis backend through environment-based Redis connection settings when running with Docker Compose.
 
 ---
 
@@ -199,12 +186,9 @@ Request body:
 ```
 
 The endpoint passes the user identifier to the underlying `RateLimiter`.
-
 If a token is available, the request is allowed.
-
 If the user's bucket has no available tokens, the API responds with HTTP `429 Too Many Requests`.
-
-The FastAPI layer is intentionally kept separate from the core rate-limiting implementation. The API handles HTTP concerns while `RateLimiter` and `TokenBucket` remain responsible for rate-limiting behavior.
+The FastAPI layer is intentionally kept separate from the core rate-limiting implementation. The API handles HTTP concerns while `RateLimiter` delegates rate-limit processing to the configured backend. The containerized v0.8.0 deployment configures the Redis backend for external rate-limit state.
 
 ---
 
@@ -216,8 +200,7 @@ Execute all automated tests using:
 python -m unittest discover
 ```
 
-The current test suite contains **23 tests** covering the core rate limiter and FastAPI API and Redis.
-
+The current test suite contains **23 automated tests** covering the core rate limiter, FastAPI API, and Redis backend.
 Expected result:
 
 ```text
@@ -236,18 +219,60 @@ The current test suite contains **8 tests**.
 Expected results:
 
 ```text
-Ran 8 tests in 21.732s
+Ran 8 tests
 
 OK
 ```
 
 All tests should pass successfully before introducing new features or refactoring existing code.
-
 For more detailed output:
 
 ```bash
 python -m unittest discover -v
 ```
+
+---
+
+## Docker Deployment
+
+Beginning with **v0.8.0**, the project can be run as a containerized application using Docker Compose.
+The Docker deployment runs:
+* FastAPI application
+* Redis 7
+The two services communicate through the Docker Compose network, and the FastAPI application uses the Redis backend.
+
+### Start the Application
+
+Build the containers:
+
+```bash
+docker compose build
+```
+### Start the services:
+
+```bash
+docker compose up -d
+```
+
+### Check the running containers:
+
+```bash
+docker compose ps
+```
+
+### The FastAPI application is available at:
+
+```bash
+http://localhost:8000
+```
+
+### Stop the services:
+
+```bash
+docker compose down
+```
+
+For detailed Docker architecture, configuration, networking, testing, and deployment information, see: `docs/DOCKER.md`
 
 ---
 
@@ -282,8 +307,12 @@ python-rate-limiter/
 │   ├── TOKEN_BUCKET.md
 │   ├── DESIGN_DECISIONS.md
 │   ├── TESTING.md
-│   └── REDIS_BACKEND.md
+│   ├── REDIS_BACKEND.md
+│   └── DOCKER.md
 │
+├── Dockerfile
+├── docker-compose.yml
+├── .dockerignore
 ├── README.md
 ├── CHANGELOG.md
 ├── PROJECT_TIMELINE.md
@@ -308,27 +337,29 @@ python-rate-limiter/
 | `PROJECT_TIMELINE.md`         | Long-term roadmap and engineering milestones.                                    |
 | `LICENSE`                     | MIT License.                                                                     |
 | `.gitignore`                  | Prevents unnecessary files from being committed to Git.                          |
+| `Dockerfile`                  | Defines the container image for the FastAPI application.                         |
+| `docker-compose.yml`          | Defines the FastAPI and Redis services and their Docker networking.              |
+| `.dockerignore`               | Excludes unnecessary and local development files from the Docker build context.  |
 
 ---
 
 ## Current Limitations
 
-The project now supports both in-memory and Redis-backed rate limiting, but several production infrastructure capabilities are intentionally outside the current scope.
-
-The following capabilities are **not** included in **v0.7.0**:
+The project now supports in-memory and Redis-backed rate limiting, FastAPI integration, and Docker-based deployment. Several operational and production infrastructure capabilities remain outside the current scope.
+The following capabilities are **not** included in **v0.8.0**:
 * No automatic cleanup of inactive in-memory buckets
 * No Redis connection health checks
 * No automatic Redis reconnection
 * No Redis failure recovery
 * No dedicated Redis configuration management
 * No authentication or TLS configuration layer for Redis
-* FastAPI currently uses the default in-memory backend
 * No demonstrated multi-server deployment
-* Not yet published to PyPI
-* No Docker support
+* No persistent Redis volume in the Docker Compose configuration
+* No Kubernetes deployment
 * No CI/CD pipeline
-
-These capabilities are planned for future releases.
+* Container images are not published to a registry
+* Not yet published to PyPI
+These capabilities may be addressed in future releases as the project evolves.
 
 ---
 
@@ -345,7 +376,7 @@ The project continues to evolve through incremental releases.
 | v0.5.0  | Packaging & Project Structure       | ✅ Completed |
 | v0.6.0  | FastAPI Integration                 | ✅ Completed |
 | v0.7.0  | Redis Backend & Backend Abstraction | ✅ Completed |
-| v0.8.0  | Docker                              | 🔄 Planned   |
+| v0.8.0  | Docker                              | ✅ Completed |
 | v0.9.0  | CI/CD                               | 🔄 Planned   |
 | v1.0.0  | Production Ready                    | 🎯 Goal      |
 
@@ -355,15 +386,16 @@ The project continues to evolve through incremental releases.
 
 Detailed documentation is available in the `docs/` directory.
 
-| Document                   | Description                                                                                 |
-| -------------------------- | ------------------------------------------------------------------------------------------- |
-| `docs/ARCHITECTURE.md`     | Software architecture, package structure, request flow, concurrency, and API integration.   |
-| `docs/TOKEN_BUCKET.md`     | In-depth explanation of the Token Bucket algorithm and rate-limiting concepts.              |
-| `docs/DESIGN_DECISIONS.md` | Engineering decisions, alternatives, trade-offs, and implementation rationale.              |
-| `docs/TESTING.md`          | Testing strategy, test structure, current coverage, and future testing roadmap.             |
-| `CHANGELOG.md`             | Complete release history.                                                                   |
-| `PROJECT_TIMELINE.md`      | Project roadmap and engineering milestones.                                                 |
-| `docs/REDIS_BACKEND.md`    | Redis backend architecture, data model, Lua processing, server-side time, TTL, and testing. |
+| Document                   | Description                                                                                            |
+| -------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `docs/ARCHITECTURE.md`     | Software architecture, package structure, request flow, concurrency, and API integration.              |
+| `docs/TOKEN_BUCKET.md`     | In-depth explanation of the Token Bucket algorithm and rate-limiting concepts.                         |
+| `docs/DESIGN_DECISIONS.md` | Engineering decisions, alternatives, trade-offs, and implementation rationale.                         |
+| `docs/TESTING.md`          | Testing strategy, test structure, current coverage, and future testing roadmap.                        |
+| `CHANGELOG.md`             | Complete release history.                                                                              |
+| `PROJECT_TIMELINE.md`      | Project roadmap and engineering milestones.                                                            |
+| `docs/REDIS_BACKEND.md`    | Redis backend architecture, data model, Lua processing, server-side time, TTL, and testing.            |
+| `docs/DOCKER.md`           | Docker architecture, containerization, Compose configuration, networking, and deployment instructions. |
 
 > For the complete release history, see **CHANGELOG.md**.
 
@@ -380,7 +412,6 @@ GitHub: https://github.com/Ansh-Dev-07
 ## License
 
 This project is licensed under the MIT License.
-
 See the `LICENSE` file for more information.
 
 ---
@@ -388,5 +419,4 @@ See the `LICENSE` file for more information.
 ## Support the Project
 
 If you find this project helpful, consider giving it a ⭐ on GitHub.
-
 Feedback, suggestions, and contributions are always welcome.

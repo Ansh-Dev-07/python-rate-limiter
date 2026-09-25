@@ -5,6 +5,58 @@ The project follows [Semantic Versioning](https://semver.org/) to manage release
 
 ---
 
+## [v0.8.0] - 2026-09-25
+
+### Added
+
+- Added Docker support for containerized deployment.
+- Added a `Dockerfile` for building the FastAPI application image.
+- Added `.dockerignore` to exclude unnecessary files from the Docker build context.
+- Added `docker-compose.yml` for running the FastAPI application and Redis as separate services.
+- Added Redis service configuration using Redis 7.
+- Added Docker Compose networking between the FastAPI application and Redis.
+- Added environment-based Redis host and port configuration through `REDIS_HOST` and `REDIS_PORT`.
+- Added containerized FastAPI deployment using the existing `RedisBackend`.
+
+### Changed
+
+- Updated `api/main.py` to configure the Redis-backed `RateLimiter` for the containerized deployment.
+- Extended the deployment architecture from a local FastAPI application to a Docker Compose environment containing FastAPI and Redis.
+- Preserved the existing Redis backend implementation while adding Docker as the deployment layer.
+
+### Documentation
+
+- Added `DOCKER.md` with Docker build, Compose, configuration, and verification instructions.
+- Updated `README.md` for v0.8.0 and Docker-based deployment.
+- Updated `ARCHITECTURE.md` with the v0.8.0 containerized deployment architecture.
+- Updated `DESIGN_DECISIONS.md` with the Docker deployment decision.
+- Updated `TESTING.md` with Docker deployment verification.
+- Updated `REDIS_BACKEND.md` to reflect the v0.8.0 deployment context.
+- Updated the project roadmap and version history.
+
+### Verification
+
+- Verified Docker image build.
+- Verified FastAPI startup inside the container.
+- Verified Redis startup through Docker Compose.
+- Verified FastAPI-to-Redis connectivity.
+- Verified Redis-backed rate limiting through the containerized API.
+- Verified successful requests followed by HTTP `429` rejection after the available tokens were exhausted.
+- Verified Docker Compose `up` and `down` operations.
+
+### Known Limitations
+
+- Redis persistence is not configured through a persistent Docker volume.
+- No Redis health checks.
+- No automatic Redis reconnection or failure recovery.
+- No Redis authentication or TLS configuration.
+- No demonstrated multi-server production deployment.
+- No CI/CD pipeline.
+- No container image publishing workflow.
+- Package not yet published to PyPI.
+
+---
+
 ## [v0.7.0] - 2026-09-14
 
 ### Added
